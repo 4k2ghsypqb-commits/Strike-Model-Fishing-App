@@ -1,0 +1,2729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Strike Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#111a13; --bg2:#1a2a1e; --bg3:#243328; --bg4:#2e3f32;
+  --cream:#f0ead6; --cream2:#d4c9a8; --cream3:#a89880;
+  --copper:#b87333; --copper2:#d4944a; --copper3:#8a5520;
+  --green:#4a7c59; --red:#8b3a3a; --red2:#c05555;
+  --shadow:rgba(0,0,0,0.5); --radius:14px; --radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--cream);font-family:'Source Serif 4',Georgia,serif;font-weight:300;font-size:16px;line-height:1.5;overflow:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.5}
+#app{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;position:relative}
+#progress-bar-wrap{height:3px;background:var(--bg3);flex-shrink:0}
+#progress-bar{height:100%;background:linear-gradient(90deg,var(--copper3),var(--copper),var(--copper2));transition:width .4s ease;width:0%}
+#header{flex-shrink:0;padding:12px 20px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(184,115,51,.15)}
+#header h1{font-family:'Playfair Display',Georgia,serif;font-size:18px;font-weight:600;letter-spacing:.02em;color:var(--cream)}
+#header-sub{font-size:11px;color:var(--cream3);letter-spacing:.08em;text-transform:uppercase;font-weight:300}
+#screen-wrap{flex:1;overflow:hidden;position:relative}
+.screen{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 20px 100px;display:none;animation:fadeIn .25s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+#bottom-nav{flex-shrink:0;padding:12px 20px;padding-bottom:calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px;background:linear-gradient(to top,var(--bg) 70%,transparent);border-top:1px solid rgba(184,115,51,.1)}
+.nav-btn{flex:1;padding:14px;border-radius:var(--radius);border:none;font-family:'Source Serif 4',serif;font-size:15px;font-weight:400;letter-spacing:.02em;cursor:pointer;transition:all .15s ease;min-height:50px}
+#btn-back{background:var(--bg3);color:var(--cream3);border:1px solid var(--bg4);flex:0.5}
+#btn-back:active{background:var(--bg4)}
+#btn-next{background:linear-gradient(135deg,var(--copper3),var(--copper));color:var(--cream);box-shadow:0 2px 12px rgba(184,115,51,.3)}
+#btn-next:active{transform:scale(.98)}
+#btn-next:disabled{background:var(--bg3);color:var(--cream3);box-shadow:none}
+.q-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--copper);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.q-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:400;color:var(--cream);line-height:1.3;margin-bottom:8px}
+.q-subtitle{font-size:13px;color:var(--cream3);margin-bottom:20px}
+.opt{display:block;width:100%;padding:14px 16px;margin-bottom:10px;border-radius:var(--radius);border:1.5px solid var(--bg4);background:var(--bg2);color:var(--cream2);font-family:'Source Serif 4',serif;font-size:15px;font-weight:300;text-align:left;cursor:pointer;transition:all .15s ease;line-height:1.4}
+.opt:active,.opt.selected{background:var(--bg3);border-color:var(--copper);color:var(--cream);box-shadow:0 0 0 1px var(--copper3) inset}
+.opt.selected::before{content:'✓ ';color:var(--copper)}
+.opt-sm{padding:11px 14px;font-size:14px}
+.opts-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opts-grid .opt{margin-bottom:0}
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--copper3);background:transparent;color:var(--copper);font-size:11px;cursor:pointer;flex-shrink:0;vertical-align:middle;margin-left:4px}
+/* Accordion */
+.accordion{border:1px solid var(--bg4);border-radius:var(--radius);overflow:hidden;margin-bottom:12px}
+.acc-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--bg2);cursor:pointer;user-select:none}
+.acc-title{font-size:14px;font-weight:400;color:var(--cream2);letter-spacing:.02em}
+.acc-meta{font-size:12px;color:var(--cream3)}
+.acc-arrow{color:var(--copper);font-size:12px;transition:transform .2s}
+.acc-arrow.open{transform:rotate(180deg)}
+.acc-body{padding:14px 16px;background:var(--bg3);display:none}
+.acc-body.open{display:block}
+/* Validation */
+.validation-msg{background:var(--red);color:var(--cream);padding:8px 12px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:10px;display:none}
+.validation-msg.show{display:block}
+/* Welcome screen */
+.welcome-title{font-family:'Playfair Display',serif;font-size:38px;font-weight:400;font-style:italic;color:var(--cream);line-height:1.15;margin-bottom:6px;letter-spacing:-.01em}
+.welcome-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--copper);margin-bottom:18px;font-weight:300}
+.welcome-rule{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.welcome-rule-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(184,115,51,.4),transparent)}
+.welcome-rule-icon{color:var(--copper);font-size:14px;opacity:.7;flex-shrink:0}
+.welcome-desc{font-size:15px;color:var(--cream3);margin-bottom:36px;line-height:1.7;font-weight:300}
+.welcome-btn{display:block;width:100%;padding:18px;border-radius:var(--radius);border:none;font-family:'Source Serif 4',serif;font-size:16px;cursor:pointer;margin-bottom:12px;transition:all .2s ease;letter-spacing:.01em}
+.welcome-btn-primary{background:linear-gradient(135deg,var(--copper3),var(--copper));color:var(--cream);box-shadow:0 4px 20px rgba(184,115,51,.4)}
+.welcome-btn-primary:active{transform:scale(.98);box-shadow:0 2px 10px rgba(184,115,51,.3)}
+.welcome-btn-secondary{background:transparent;color:var(--cream2);border:1.5px solid rgba(184,115,51,.3)}
+.welcome-btn-secondary:active{background:var(--bg2)}
+/* Results */
+.result-section{margin-bottom:28px}
+.result-section-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--copper);margin-bottom:14px;padding-bottom:6px;border-bottom:1px solid rgba(184,115,51,.2)}
+.conditions-banner{background:var(--bg3);border:1px solid var(--bg4);border-radius:var(--radius);padding:16px;margin-bottom:20px}
+.bite-label{font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:6px}
+.bite-excellent{color:#7ec850} .bite-good{color:#a8d870} .bite-moderate{color:#d4c050}
+.bite-slow{color:#d49440} .bite-poor{color:#c05555}
+.conditions-summary{font-size:13px;color:var(--cream2);line-height:1.6}
+.edge-flag{padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:10px;font-size:13px;font-weight:400}
+.flag-warning{background:rgba(192,85,85,.2);border:1px solid var(--red2);color:#f0a0a0}
+.flag-info{background:rgba(74,124,89,.2);border:1px solid var(--green);color:#a0d4b0}
+/* Lure card */
+.lure-card{background:var(--bg3);border:1px solid var(--bg4);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.lure-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.lure-rank{font-family:'Playfair Display',serif;font-size:15px;font-weight:600;color:var(--cream)}
+.lure-indicator{font-size:16px}
+.ind-owned{color:#7ec850} .ind-notowned{color:#c05555} .ind-warning{color:#d4944a}
+.lure-field{font-size:13px;color:var(--cream2);margin-bottom:5px;line-height:1.5}
+.lure-field strong{color:var(--cream3);font-weight:400;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.notable-gaps{background:rgba(184,115,51,.08);border:1px solid rgba(184,115,51,.2);border-radius:var(--radius);padding:14px;margin-top:12px}
+.notable-gaps h4{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--copper);margin-bottom:8px}
+.gap-item{font-size:13px;color:var(--cream2);margin-bottom:4px}
+/* Modal */
+#modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:none;align-items:flex-end}
+#modal-overlay.show{display:flex}
+#modal-box{background:var(--bg2);border-radius:var(--radius) var(--radius) 0 0;width:100%;max-height:75vh;overflow-y:auto;padding:24px 20px;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+#modal-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;margin-bottom:12px;color:var(--cream)}
+#modal-content{font-size:14px;color:var(--cream2);line-height:1.6}
+#modal-content table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+#modal-content td,#modal-content th{padding:6px 8px;border:1px solid var(--bg4);text-align:left}
+#modal-content th{background:var(--bg3);color:var(--cream);font-weight:400}
+#modal-close{display:block;width:100%;margin-top:16px;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--bg4);background:var(--bg3);color:var(--cream2);font-family:'Source Serif 4',serif;font-size:15px;cursor:pointer}
+/* Lure checklist */
+.lure-cat-header{display:flex;justify-content:space-between;align-items:center;padding:12px 0 8px;border-bottom:1px solid var(--bg4);cursor:pointer;user-select:none}
+.lure-cat-title{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--copper2)}
+.lure-cat-body{padding:8px 0 4px}
+.lure-check-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.lure-check-name{font-size:14px;color:var(--cream2)}
+.lure-check-box{width:24px;height:24px;border-radius:6px;border:1.5px solid var(--bg4);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s ease;color:var(--copper);font-size:14px}
+.lure-check-box.checked{background:var(--copper3);border-color:var(--copper);color:var(--cream)}
+/* Fly rod */
+.fly-card{background:var(--bg3);border:1px solid rgba(184,115,51,.3);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.fly-section-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--copper);margin-bottom:8px}
+.season-note{background:rgba(74,124,89,.15);border:1px solid rgba(74,124,89,.3);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#b0d4b8;margin-bottom:12px;line-height:1.5}
+.transition-note{background:rgba(184,115,51,.1);border:1px solid rgba(184,115,51,.25);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--cream2);margin-top:12px;line-height:1.5}
+.unknown-note{background:rgba(138,85,32,.1);border:1px solid rgba(138,85,32,.3);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--cream3);margin-bottom:8px}
+/* Q15 water body accordion details */
+.wb-section{margin-bottom:4px}
+.select-all-row{display:flex;justify-content:flex-end;margin-bottom:8px}
+.link-btn{background:none;border:none;color:var(--copper);font-size:13px;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(184,115,51,.4)}
+#modal-content p{margin-bottom:10px}
+#modal-content em{color:var(--cream);font-style:italic}
+#modal-content br+br{display:block;content:'';margin-top:4px}
+#progress-label{font-size:11px;color:var(--cream3);letter-spacing:.06em}
+/* Welcome screen layout - must use active selector to not bleed through */
+#screen-welcome.active{display:flex;flex-direction:column;justify-content:center}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="progress-bar-wrap" style="display:none"><div id="progress-bar"></div></div>
+  <div id="header" style="display:none">
+    <div>
+      <h1>Strike Model</h1>
+      <div id="header-sub">Fishing Strategy Advisor</div>
+    </div>
+    <span id="progress-label"></span>
+  </div>
+  <div id="screen-wrap">
+
+    <!-- WELCOME -->
+    <div class="screen active" id="screen-welcome" style="padding-top:calc(20px + env(safe-area-inset-top))">
+      <div style="text-align:center;padding:0 8px">
+        <div class="welcome-eyebrow">Fishing Strategy Advisor</div>
+        <div class="welcome-title">Strike Model</div>
+        <div class="welcome-rule">
+          <div class="welcome-rule-line"></div>
+          <div class="welcome-rule-icon">⬡</div>
+          <div class="welcome-rule-line"></div>
+        </div>
+        <div class="welcome-desc">Ranked lure recommendations based on your water, conditions, and what's in your box — every session.</div>
+        <button class="welcome-btn welcome-btn-primary" onclick="startNew()">New Session →</button>
+        <button class="welcome-btn welcome-btn-secondary" id="btn-continue" style="display:none" onclick="startContinue()">Continue at <span id="continue-label">last session</span> →</button>
+        <div style="display:flex;gap:16px;justify-content:center;margin-top:20px">
+          <button class="link-btn" onclick="showModal('testingQuestions')" style="font-size:13px;color:var(--cream3)">How to validate recommendations ↗</button>
+          <button class="link-btn" onclick="showModal('faq')" style="font-size:13px;color:var(--cream3)">Virginia fishing guide ↗</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q1: WATER BODY SELECTION -->
+    <div class="screen" id="screen-q1">
+      <div class="q-label">Question 1</div>
+      <div class="q-title">Where are you fishing?</div>
+      <div class="q-subtitle">Select a saved location or describe a new water body</div>
+      <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream3);margin-bottom:10px">Saved Locations</div>
+      <button class="opt" onclick="selectPreset('evergreen', this)">Evergreen Lake <span style="color:var(--cream3);font-size:13px">· Pond/Small Lake · Central VA Piedmont</span></button>
+      <button class="opt" onclick="selectPreset('swiftCreek', this)">Swift Creek Reservoir <span style="color:var(--cream3);font-size:13px">· Medium Reservoir · Central VA Piedmont</span></button>
+      <button class="opt" onclick="selectPreset('lakeAnna', this)">Lake Anna <span style="color:var(--cream3);font-size:13px">· Large Reservoir · Central VA Piedmont</span></button>
+      <button class="opt" onclick="selectPreset('kerrLake', this)">Kerr Lake (Buggs Island) <span style="color:var(--cream3);font-size:13px">· Large Reservoir · Southside VA</span></button>
+      <button class="opt" onclick="selectPreset('jamesUpper', this)">James River — Upper <span style="color:var(--cream3);font-size:13px">· River · Iron Gate to Lynchburg</span></button>
+      <button class="opt" onclick="selectPreset('jamesMiddle', this)">James River — Middle <span style="color:var(--cream3);font-size:13px">· River · Lynchburg to Fall Line</span></button>
+      <button class="opt" onclick="selectPreset('jamesLower', this)">James River — Lower/Tidal <span style="color:var(--cream3);font-size:13px">· Tidal River · Fall Line to Chesapeake</span></button>
+      <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream3);margin:16px 0 10px">New Water</div>
+      <button class="opt" onclick="selectPreset('custom', this)">Describe a new water body →</button>
+    </div>
+
+    <!-- Q1.5: WATER BODY DETAILS ACCORDION -->
+    <div class="screen" id="screen-q1b">
+      <div class="q-label">Water Body Details</div>
+      <div class="q-title" id="q1b-title">Water Body Details</div>
+      <div class="q-subtitle" id="q1b-subtitle">Pre-filled from your selection — tap any section to review or change</div>
+
+      <!-- Section A: Identity -->
+      <div class="accordion" id="acc-identity">
+        <div class="acc-header" onclick="toggleAcc('identity')">
+          <span class="acc-title">Identity</span>
+          <span style="display:flex;align-items:center;gap:8px"><span class="acc-meta" id="acc-identity-meta"></span><span class="acc-arrow" id="acc-identity-arrow">▾</span></span>
+        </div>
+        <div class="acc-body" id="acc-identity-body">
+          <div style="font-size:13px;color:var(--cream3);margin-bottom:8px">Water type <button class="info-btn" onclick="showModal('waterType')">ⓘ</button></div>
+          <div id="wb-type-opts">
+            <button class="opt opt-sm" data-wb-val="pond" onclick="setWB('type','pond')">Pond / Small Lake <span style="color:var(--cream3)">under 100 acres</span></button>
+            <button class="opt opt-sm" data-wb-val="lakeMed" onclick="setWB('type','lakeMed')">Lake — Medium <span style="color:var(--cream3)">100–5,000 acres</span></button>
+            <button class="opt opt-sm" data-wb-val="lakeLarge" onclick="setWB('type','lakeLarge')">Lake — Large <span style="color:var(--cream3)">over 5,000 acres</span></button>
+            <button class="opt opt-sm" data-wb-val="reservoir" onclick="setWB('type','reservoir')">Reservoir <span style="color:var(--cream3)">dam-controlled</span></button>
+            <button class="opt opt-sm" data-wb-val="river" onclick="setWB('type','river')">River</button>
+            <button class="opt opt-sm" data-wb-val="tidal" onclick="setWB('type','tidal')">Tidal River</button>
+          </div>
+          <div style="font-size:13px;color:var(--cream3);margin:12px 0 8px">Region</div>
+          <div id="wb-region-opts">
+            <div class="opts-grid">
+              <button class="opt opt-sm" data-wb-val="piedmont" onclick="setWB('region','piedmont')">Central VA Piedmont</button>
+              <button class="opt opt-sm" data-wb-val="southside" onclick="setWB('region','southside')">Southside VA</button>
+              <button class="opt opt-sm" data-wb-val="shenandoah" onclick="setWB('region','shenandoah')">Shenandoah Valley / Blue Ridge</button>
+              <button class="opt opt-sm" data-wb-val="tidewater" onclick="setWB('region','tidewater')">Hampton Roads / Tidewater</button>
+              <button class="opt opt-sm" data-wb-val="nva" onclick="setWB('region','nva')">Northern Virginia</button>
+              <button class="opt opt-sm" data-wb-val="swva" onclick="setWB('region','swva')">Southwest VA</button>
+              <button class="opt opt-sm" data-wb-val="other" onclick="setWB('region','other')">Other Virginia</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section B: Physical Character -->
+      <div class="accordion" id="acc-physical">
+        <div class="acc-header" onclick="toggleAcc('physical')">
+          <span class="acc-title">Physical Character</span>
+          <span style="display:flex;align-items:center;gap:8px"><span class="acc-meta" id="acc-physical-meta"></span><span class="acc-arrow" id="acc-physical-arrow">▾</span></span>
+        </div>
+        <div class="acc-body" id="acc-physical-body">
+          <div style="font-size:13px;color:var(--cream3);margin-bottom:8px">Depth profile</div>
+          <div id="wb-depth-opts">
+            <button class="opt opt-sm" data-wb-val="shallow" onclick="setWB('depth','shallow')">Shallow throughout</button>
+            <button class="opt opt-sm" data-wb-val="shallowDeep" onclick="setWB('depth','shallowDeep')">Shallow with one deeper area</button>
+            <button class="opt opt-sm" data-wb-val="mixed" onclick="setWB('depth','mixed')">Mixed shallow and deep</button>
+            <button class="opt opt-sm" data-wb-val="deep" onclick="setWB('depth','deep')">Primarily deep</button>
+            <button class="opt opt-sm" data-wb-val="unknown" onclick="setWB('depth','unknown')">Unknown</button>
+          </div>
+          <div style="font-size:13px;color:var(--cream3);margin:12px 0 8px">Flow / current</div>
+          <div class="opts-grid" id="wb-flow-opts">
+            <button class="opt opt-sm" data-wb-val="still" onclick="setWB('flow','still')">Still</button>
+            <button class="opt opt-sm" data-wb-val="slight" onclick="setWB('flow','slight')">Slight drift</button>
+            <button class="opt opt-sm" data-wb-val="moderate" onclick="setWB('flow','moderate')">Moderate current</button>
+            <button class="opt opt-sm" data-wb-val="strong" onclick="setWB('flow','strong')">Strong current</button>
+            <button class="opt opt-sm" data-wb-val="unknown" onclick="setWB('flow','unknown')">Unknown</button>
+          </div>
+          <div style="font-size:13px;color:var(--cream3);margin:12px 0 8px">Bottom composition</div>
+          <div class="opts-grid" id="wb-bottom-opts">
+            <button class="opt opt-sm" data-wb-val="silt" onclick="setWB('bottom','silt')">Soft silt / mud</button>
+            <button class="opt opt-sm" data-wb-val="sand" onclick="setWB('bottom','sand')">Sand</button>
+            <button class="opt opt-sm" data-wb-val="gravel" onclick="setWB('bottom','gravel')">Gravel</button>
+            <button class="opt opt-sm" data-wb-val="rock" onclick="setWB('bottom','rock')">Rock</button>
+            <button class="opt opt-sm" data-wb-val="clay" onclick="setWB('bottom','clay')">Hard clay</button>
+            <button class="opt opt-sm" data-wb-val="mixed" onclick="setWB('bottom','mixed')">Mixed</button>
+            <button class="opt opt-sm" data-wb-val="unknown" onclick="setWB('bottom','unknown')">Unknown</button>
+          </div>
+          <div style="font-size:13px;color:var(--cream3);margin:12px 0 8px">Exposure</div>
+          <div class="opts-grid" id="wb-exposure-opts">
+            <button class="opt opt-sm" data-wb-val="sheltered" onclick="setWB('exposure','sheltered')">Sheltered</button>
+            <button class="opt opt-sm" data-wb-val="semi" onclick="setWB('exposure','semi')">Semi-exposed</button>
+            <button class="opt opt-sm" data-wb-val="open" onclick="setWB('exposure','open')">Open</button>
+            <button class="opt opt-sm" data-wb-val="unknown" onclick="setWB('exposure','unknown')">Unknown</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section C: Visible Features -->
+      <div class="accordion" id="acc-features">
+        <div class="acc-header" onclick="toggleAcc('features')">
+          <span class="acc-title">Visible Features</span>
+          <span style="display:flex;align-items:center;gap:8px"><span class="acc-meta" id="acc-features-meta">0 selected</span><span class="acc-arrow" id="acc-features-arrow">▾</span></span>
+        </div>
+        <div class="acc-body" id="acc-features-body">
+          <div style="font-size:13px;color:var(--cream3);margin-bottom:10px">What can you see from the water? Select all that apply. <button class="info-btn" onclick="showModal('habitatFeatures')">ⓘ</button></div>
+          <div id="wb-features-opts">
+            <button class="opt opt-sm" data-wb-val="lilyPads" onclick="toggleWBFeature('lilyPads')">Lily pads / emergent vegetation</button>
+            <button class="opt opt-sm" data-wb-val="subGrass" onclick="toggleWBFeature('subGrass')">Submerged grass / weed beds</button>
+            <button class="opt opt-sm" data-wb-val="laydowns" onclick="toggleWBFeature('laydowns')">Laydowns / fallen timber</button>
+            <button class="opt opt-sm" data-wb-val="docks" onclick="toggleWBFeature('docks')">Docks / pilings</button>
+            <button class="opt opt-sm" data-wb-val="rockyPoints" onclick="toggleWBFeature('rockyPoints')">Rocky points / boulders</button>
+            <button class="opt opt-sm" data-wb-val="algaeMats" onclick="toggleWBFeature('algaeMats')">Algae mats / surface scum</button>
+            <button class="opt opt-sm" data-wb-val="overhangingVeg" onclick="toggleWBFeature('overhangingVeg')">Overhanging vegetation / foliage</button>
+            <button class="opt opt-sm" data-wb-val="currentSeams" onclick="toggleWBFeature('currentSeams')">Current seams</button>
+            <button class="opt opt-sm" data-wb-val="openWater" onclick="toggleWBFeature('openWater')">Open water / minimal visible features</button>
+            <button class="opt opt-sm" data-wb-val="unknown" onclick="toggleWBFeature('unknown')">Unknown</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section D: Subsurface Structure (hidden for pond/tidal) -->
+      <div class="accordion" id="acc-subsurface">
+        <div class="acc-header" onclick="toggleAcc('subsurface')">
+          <span class="acc-title">Subsurface Structure</span>
+          <span style="display:flex;align-items:center;gap:8px"><span class="acc-meta" id="acc-subsurface-meta">0 selected</span><span class="acc-arrow" id="acc-subsurface-arrow">▾</span></span>
+        </div>
+        <div class="acc-body" id="acc-subsurface-body">
+          <div style="font-size:13px;color:var(--cream3);margin-bottom:10px">Underwater features — select Unknown if unsure</div>
+          <div id="wb-subsurface-opts">
+            <button class="opt opt-sm" data-wb-val="ledges" onclick="toggleWBSub('ledges')">Ledges / drop-offs</button>
+            <button class="opt opt-sm" data-wb-val="channels" onclick="toggleWBSub('channels')">Channel edges</button>
+            <button class="opt opt-sm" data-wb-val="brushPiles" onclick="toggleWBSub('brushPiles')">Submerged brush piles</button>
+            <button class="opt opt-sm" data-wb-val="humps" onclick="toggleWBSub('humps')">Submerged points / humps</button>
+            <button class="opt opt-sm" data-wb-val="flat" onclick="toggleWBSub('flat')">Flat featureless bottom</button>
+            <button class="opt opt-sm" data-wb-val="unknown" onclick="toggleWBSub('unknown')">Unknown</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section E: Shoreline -->
+      <div class="accordion" id="acc-shoreline">
+        <div class="acc-header" onclick="toggleAcc('shoreline')">
+          <span class="acc-title">Shoreline Character</span>
+          <span style="display:flex;align-items:center;gap:8px"><span class="acc-meta" id="acc-shoreline-meta">0 selected</span><span class="acc-arrow" id="acc-shoreline-arrow">▾</span></span>
+        </div>
+        <div class="acc-body" id="acc-shoreline-body">
+          <div id="wb-shoreline-opts">
+            <button class="opt opt-sm" data-wb-val="heavilyVeg" onclick="toggleWBShore('heavilyVeg')">Heavily vegetated</button>
+            <button class="opt opt-sm" data-wb-val="wooded" onclick="toggleWBShore('wooded')">Wooded / forested banks</button>
+            <button class="opt opt-sm" data-wb-val="docks" onclick="toggleWBShore('docks')">Developed with docks</button>
+            <button class="opt opt-sm" data-wb-val="open" onclick="toggleWBShore('open')">Open / grassy banks</button>
+            <button class="opt opt-sm" data-wb-val="mixed" onclick="toggleWBShore('mixed')">Mixed / varied</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section F: Forage & Species -->
+      <div class="accordion" id="acc-forage">
+        <div class="acc-header" onclick="toggleAcc('forage')">
+          <span class="acc-title">Forage &amp; Target Species</span>
+          <span style="display:flex;align-items:center;gap:8px"><span class="acc-meta" id="acc-forage-meta"></span><span class="acc-arrow" id="acc-forage-arrow">▾</span></span>
+        </div>
+        <div class="acc-body" id="acc-forage-body">
+          <div style="font-size:13px;color:var(--cream3);margin-bottom:8px">Known forage present</div>
+          <div id="wb-forage-opts">
+            <button class="opt opt-sm" data-wb-val="shad" onclick="toggleWBForage('shad')">Shad / baitfish</button>
+            <button class="opt opt-sm" data-wb-val="bluegill" onclick="toggleWBForage('bluegill')">Bluegill / sunfish</button>
+            <button class="opt opt-sm" data-wb-val="crayfish" onclick="toggleWBForage('crayfish')">Crayfish</button>
+            <button class="opt opt-sm" data-wb-val="perch" onclick="toggleWBForage('perch')">Perch</button>
+            <button class="opt opt-sm" data-wb-val="juvenileBass" onclick="toggleWBForage('juvenileBass')">Juvenile bass / crappie</button>
+            <button class="opt opt-sm" data-wb-val="unknown" onclick="toggleWBForage('unknown')">Unknown</button>
+          </div>
+          <div style="font-size:13px;color:var(--cream3);margin:12px 0 8px">Target species present</div>
+          <div id="wb-species-opts">
+            <div class="opts-grid">
+              <button class="opt opt-sm" data-wb-val="largemouth" onclick="toggleWBSpecies('largemouth')">Largemouth bass</button>
+              <button class="opt opt-sm" data-wb-val="smallmouth" onclick="toggleWBSpecies('smallmouth')">Smallmouth bass</button>
+              <button class="opt opt-sm" data-wb-val="spotted" onclick="toggleWBSpecies('spotted')">Spotted bass</button>
+              <button class="opt opt-sm" data-wb-val="bluegill" onclick="toggleWBSpecies('bluegill')">Bluegill</button>
+              <button class="opt opt-sm" data-wb-val="crappie" onclick="toggleWBSpecies('crappie')">Crappie</button>
+              <button class="opt opt-sm" data-wb-val="redbreast" onclick="toggleWBSpecies('redbreast')">Redbreast sunfish</button>
+              <button class="opt opt-sm" data-wb-val="rockBass" onclick="toggleWBSpecies('rockBass')">Rock bass</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section G: Access -->
+      <div class="accordion" id="acc-access">
+        <div class="acc-header" onclick="toggleAcc('access')">
+          <span class="acc-title">Access</span>
+          <span style="display:flex;align-items:center;gap:8px"><span class="acc-meta" id="acc-access-meta">0 selected</span><span class="acc-arrow" id="acc-access-arrow">▾</span></span>
+        </div>
+        <div class="acc-body" id="acc-access-body">
+          <div class="opts-grid" id="wb-access-opts">
+            <button class="opt opt-sm" data-wb-val="bank" onclick="toggleWBAccess('bank')">Bank</button>
+            <button class="opt opt-sm" data-wb-val="kayak" onclick="toggleWBAccess('kayak')">Kayak / Canoe / Boat</button>
+            <button class="opt opt-sm" data-wb-val="wade" onclick="toggleWBAccess('wade')">Wade</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q2: TARGET SPECIES (session-level) -->
+    <div class="screen" id="screen-q2">
+      <div class="q-label" id="q2-label">Question 2</div>
+      <div class="q-title">What are you targeting today?</div>
+      <button class="opt" onclick="setSpecies('bass',this)">Bass only</button>
+      <button class="opt" onclick="setSpecies('panfish',this)">Panfish only</button>
+      <button class="opt" onclick="setSpecies('both',this)">Bass &amp; panfish</button>
+    </div>
+
+    <!-- Q3: BASS SIZE GOAL -->
+    <div class="screen" id="screen-q3">
+      <div class="q-label" id="q3-label">Question 3</div>
+      <div class="q-title">Size goal for bass today? <button class="info-btn" onclick="showModal('sizeGoal')">ⓘ</button></div>
+      <div id="go-big-panfish-note" class="season-note" style="display:none">Go Big sessions are bass-focused — panfish recommendations won't appear today.</div>
+      <button class="opt" onclick="setGoal('goBig',this)">Go big or go home <span style="color:var(--cream3);font-size:13px">— baitcasters only, trophy focus</span></button>
+      <button class="opt" onclick="setGoal('maximize',this)">Maximize hookups <span style="color:var(--cream3);font-size:13px">— smaller profiles, more action</span></button>
+      <button class="opt" onclick="setGoal('hedge',this)">Hedge <span style="color:var(--cream3);font-size:13px">— multiple rods, split strategy</span></button>
+      <div id="hedge-warning" class="validation-msg">Hedge requires multiple rods (baitcaster + UL spinning). You can select different rods on the next screen.</div>
+    </div>
+
+    <!-- Q4: SEASON -->
+    <div class="screen" id="screen-q4">
+      <div class="q-label" id="q4-label">Question 4</div>
+      <div class="q-title">Season / spawn stage? <button class="info-btn" onclick="showModal('season')">ⓘ</button></div>
+      <div id="season-auto-note" class="season-note"></div>
+      <button class="opt" onclick="setSeason('winter',this)">Winter <span style="color:var(--cream3);font-size:13px">· Below 50°F</span></button>
+      <button class="opt" onclick="setSeason('preSpawn',this)">Early Spring / Pre-Spawn <span style="color:var(--cream3);font-size:13px">· 50–62°F</span></button>
+      <button class="opt" onclick="setSeason('spawn',this)">Spawn <span style="color:var(--cream3);font-size:13px">· 62–72°F</span></button>
+      <button class="opt" onclick="setSeason('postSpawn',this)">Post-Spawn / Late Spring <span style="color:var(--cream3);font-size:13px">· 68–78°F</span></button>
+      <button class="opt" onclick="setSeason('summer',this)">Summer <span style="color:var(--cream3);font-size:13px">· Above 75°F</span></button>
+      <button class="opt" onclick="setSeason('fall',this)">Fall <span style="color:var(--cream3);font-size:13px">· 55–70°F cooling</span></button>
+    </div>
+
+    <!-- Q5: WATER TEMP -->
+    <div class="screen" id="screen-q5">
+      <div class="q-label" id="q5-label">Question 5</div>
+      <div class="q-title">Water temperature?</div>
+      <div class="q-subtitle">Pre-selected from season — tap to override</div>
+      <div id="temp-opts">
+        <button class="opt" onclick=\"setTemp(42,'Below 45°F',this)\">Below 45°F</button>
+        <button class="opt" onclick=\"setTemp(47,'45–50°F',this)\">45–50°F</button>
+        <button class="opt" onclick=\"setTemp(52,'50–55°F',this)\">50–55°F</button>
+        <button class="opt" onclick=\"setTemp(57,'55–60°F',this)\">55–60°F</button>
+        <button class="opt" onclick=\"setTemp(62,'60–65°F',this)\">60–65°F</button>
+        <button class="opt" onclick=\"setTemp(66,'65–68°F',this)\">65–68°F</button>
+        <button class="opt" onclick=\"setTemp(71,'68–75°F',this)\">68–75°F</button>
+        <button class="opt" onclick=\"setTemp(77,'75–80°F',this)\">75–80°F</button>
+        <button class="opt" onclick=\"setTemp(82,'80–85°F',this)\">80–85°F</button>
+        <button class="opt" onclick=\"setTemp(87,'Above 85°F',this)\">Above 85°F</button>
+      </div>
+    </div>
+
+    <!-- Q6: TIME PERIOD -->
+    <div class="screen" id="screen-q6">
+      <div class="q-label" id="q6-label">Question 6</div>
+      <div class="q-title">Time period(s) today?</div>
+      <div class="q-subtitle">Select all that apply</div>
+      <div class="opts-grid">
+        <button class="opt" data-q="timePeriods" data-val="dawn" onclick="toggleMulti(this)">Dawn</button>
+        <button class="opt" data-q="timePeriods" data-val="morning" onclick="toggleMulti(this)">Morning</button>
+        <button class="opt" data-q="timePeriods" data-val="midday" onclick="toggleMulti(this)">Midday</button>
+        <button class="opt" data-q="timePeriods" data-val="afternoon" onclick="toggleMulti(this)">Afternoon</button>
+        <button class="opt" data-q="timePeriods" data-val="evening" onclick="toggleMulti(this)">Evening</button>
+        <button class="opt" data-q="timePeriods" data-val="dusk" onclick="toggleMulti(this)">Dusk</button>
+      </div>
+    </div>
+
+    <!-- Q7: RODS -->
+    <div class="screen" id="screen-q7">
+      <div class="q-label" id="q7-label">Question 7</div>
+      <div class="q-title">Rods today?</div>
+      <div class="q-subtitle">Fly rod selection locks you into a fly-only session</div>
+      <button class="opt opt-sm" style="margin-bottom:12px" onclick="selectAllRods()">Select all spinning + baitcasting</button>
+      <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream3);margin-bottom:8px">Spinning</div>
+      <div class="opts-grid">
+        <button class="opt" data-q="rods" data-val="spinning_ul" onclick="toggleRod(this)">UL Spinning</button>
+        <button class="opt" data-q="rods" data-val="spinning_l" onclick="toggleRod(this)">L Spinning</button>
+        <button class="opt" data-q="rods" data-val="spinning_m" onclick="toggleRod(this)">M Spinning</button>
+        <button class="opt" data-q="rods" data-val="spinning_h" onclick="toggleRod(this)">H Spinning</button>
+      </div>
+      <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream3);margin:12px 0 8px">Baitcasting</div>
+      <div class="opts-grid">
+        <button class="opt" data-q="rods" data-val="bc_bfs" onclick="toggleRod(this)">BFS</button>
+        <button class="opt" data-q="rods" data-val="bc_m" onclick="toggleRod(this)">M Baitcaster</button>
+        <button class="opt" data-q="rods" data-val="bc_mh" onclick="toggleRod(this)">MH Baitcaster</button>
+        <button class="opt" data-q="rods" data-val="bc_h" onclick="toggleRod(this)">H Baitcaster</button>
+      </div>
+      <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream3);margin:12px 0 8px">Fly</div>
+      <div class="opts-grid">
+        <button class="opt" data-q="rods" data-val="fly_3wt" onclick="toggleRod(this)">3wt Fly</button>
+        <button class="opt" data-q="rods" data-val="fly_4wt" onclick="toggleRod(this)">4wt Fly</button>
+        <button class="opt" data-q="rods" data-val="fly_5wt" onclick="toggleRod(this)">5wt Fly</button>
+        <button class="opt" data-q="rods" data-val="fly_8wt" onclick="toggleRod(this)">8wt Fly</button>
+      </div>
+    </div>
+
+    <!-- Q8: FLY LINE (conditional) -->
+    <div class="screen" id="screen-q8">
+      <div class="q-label" id="q8-label">Question 8</div>
+      <div class="q-title">Fly line type?</div>
+      <button class="opt" onclick=\"setSingle('flyLine','wf',this)\">Weight-Forward (WF) <span style="color:var(--cream3);font-size:13px">— surface &amp; shallow</span></button>
+      <button class="opt" onclick=\"setSingle('flyLine','intermediate',this)\">Intermediate <span style="color:var(--cream3);font-size:13px">— slow sink, subsurface</span></button>
+      <button class="opt" onclick=\"setSingle('flyLine','sinking',this)\">Sinking <span style="color:var(--cream3);font-size:13px">— deeper water</span></button>
+    </div>
+
+    <!-- Q9: CURRENT SKY -->
+    <div class="screen" id="screen-q9">
+      <div class="q-label" id="q9-label">Question 9</div>
+      <div class="q-title">Current sky and weather?</div>
+      <div class="q-subtitle">What's happening right now — select all that apply</div>
+      <div id="q9-validation" class="validation-msg"></div>
+      <button class="opt" data-q="sky" data-val="clear" onclick="toggleSky(this)">Clear / bright sun</button>
+      <button class="opt" data-q="sky" data-val="partlyCloudy" onclick="toggleSky(this)">Partly cloudy</button>
+      <button class="opt" data-q="sky" data-val="overcast" onclick="toggleSky(this)">Overcast</button>
+      <button class="opt" data-q="sky" data-val="foggy" onclick="toggleSky(this)">Foggy</button>
+      <button class="opt" data-q="sky" data-val="frontMovingIn" onclick="toggleSky(this)">Cold front moving in <span style="color:var(--cream3);font-size:13px">— storm building, pressure dropping</span></button>
+      <button class="opt" data-q="sky" data-val="stormPassed" onclick="toggleSky(this)">Sky clearing now <span style="color:var(--cream3);font-size:13px">— storm just ended</span></button>
+    </div>
+
+    <!-- Q10: RECENT WEATHER -->
+    <div class="screen" id="screen-q10">
+      <div class="q-label" id="q10-label">Question 10</div>
+      <div class="q-title">Recent weather pattern? <button class="info-btn" onclick="showModal('recentWeather')">ⓘ</button></div>
+      <div class="q-subtitle">Last 48–72 hours — you can select combinations</div>
+      <div id="q10-tip" class="season-note">Tip: Combine options — e.g. "warming trend" + "post-cold front 48+ hrs" means the front passed and temps are now recovering.</div>
+      <div id="q10-validation" class="validation-msg"></div>
+      <button class="opt" data-q="recentWeather" data-val="stable" onclick="toggleWeather(this)">Stable — no recent change</button>
+      <button class="opt" data-q="recentWeather" data-val="warmingTrend" onclick="toggleWeather(this)">Warming trend <span style="color:var(--cream3);font-size:13px">— gradual, no front</span></button>
+      <button class="opt" data-q="recentWeather" data-val="postFront48" onclick="toggleWeather(this)">Post-cold front — within 48 hrs</button>
+      <button class="opt" data-q="recentWeather" data-val="postFront48plus" onclick="toggleWeather(this)">Post-cold front — 48+ hrs ago</button>
+      <button class="opt" data-q="recentWeather" data-val="unknown" onclick="toggleWeather(this)">Unknown</button>
+    </div>
+
+    <!-- Q11: PRECIPITATION -->
+    <div class="screen" id="screen-q11">
+      <div class="q-label" id="q11-label">Question 11</div>
+      <div class="q-title">Precipitation?</div>
+      <button class="opt" onclick=\"setSingle('rainfall','none',this)\">No rain — dry 48+ hours</button>
+      <button class="opt" onclick=\"setSingle('rainfall','lightNow',this)\">Currently raining — light</button>
+      <button class="opt" onclick=\"setSingle('rainfall','heavyNow',this)\">Currently raining — heavy</button>
+      <button class="opt" onclick=\"setSingle('rainfall','lightRecent',this)\">Light rain recently (within 48 hrs)</button>
+      <button class="opt" onclick=\"setSingle('rainfall','heavyRecent',this)\">Heavy rain recently (within 48 hrs)</button>
+      <button class="opt" onclick=\"setSingle('rainfall','unknown',this)\">Unknown</button>
+    </div>
+
+    <!-- Q12: WATER CLARITY -->
+    <div class="screen" id="screen-q12">
+      <div class="q-label" id="q12-label">Question 12</div>
+      <div class="q-title">Water clarity? <button class="info-btn" onclick="showModal('clarity')">ⓘ</button></div>
+      <button class="opt" onclick=\"setSingle('clarity','clear',this)\">Clear <span style="color:var(--cream3);font-size:13px">2 ft+ visibility</span></button>
+      <button class="opt" onclick=\"setSingle('clarity','lightly',this)\">Lightly stained <span style="color:var(--cream3);font-size:13px">6 in – 2 ft</span></button>
+      <button class="opt" onclick=\"setSingle('clarity','murky',this)\">Murky <span style="color:var(--cream3);font-size:13px">3 – 6 in</span></button>
+      <button class="opt" onclick=\"setSingle('clarity','muddy',this)\">Muddy <span style="color:var(--cream3);font-size:13px">0 – 3 in</span></button>
+    </div>
+
+    <!-- Q13: WIND -->
+    <div class="screen" id="screen-q13">
+      <div class="q-label" id="q13-label">Question 13</div>
+      <div class="q-title">Wind?</div>
+      <div class="opts-grid">
+        <button class="opt" onclick=\"setSingle('wind','calm',this)\">Calm</button>
+        <button class="opt" onclick=\"setSingle('wind','light',this)\">Light breeze</button>
+        <button class="opt" onclick=\"setSingle('wind','moderate',this)\">Moderate</button>
+        <button class="opt" onclick=\"setSingle('wind','strong',this)\">Strong</button>
+        <button class="opt" onclick=\"setSingle('wind','unknown',this)\">Unknown</button>
+      </div>
+    </div>
+
+    <!-- Q14: FORAGE KEYING -->
+    <div class="screen" id="screen-q14">
+      <div class="q-label" id="q14-label">Question 14</div>
+      <div class="q-title">What forage are fish keying on today? <button class="info-btn" onclick="showModal('forage')">ⓘ</button></div>
+      <button class="opt" onclick=\"setSingle('forage','unknown',this)\">Unknown — use seasonal defaults</button>
+      <button class="opt" onclick=\"setSingle('forage','shad',this)\">Shad / baitfish</button>
+      <button class="opt" onclick=\"setSingle('forage','bluegill',this)\">Bluegill / sunfish</button>
+      <button class="opt" onclick=\"setSingle('forage','crayfish',this)\">Crayfish</button>
+      <button class="opt" onclick=\"setSingle('forage','multiple',this)\">Multiple / mixed forage</button>
+    </div>
+
+    <!-- Q15: FISHING PRESSURE -->
+    <div class="screen" id="screen-q15">
+      <div class="q-label" id="q15-label">Question 15</div>
+      <div class="q-title">Fishing pressure today? <button class="info-btn" onclick="showModal('pressure')">ⓘ</button></div>
+      <div class="opts-grid">
+        <button class="opt" onclick=\"setSingle('pressure','low',this)\">Low</button>
+        <button class="opt" onclick=\"setSingle('pressure','medium',this)\">Medium</button>
+        <button class="opt" onclick=\"setSingle('pressure','high',this)\">High</button>
+        <button class="opt" onclick=\"setSingle('pressure','unknown',this)\">Unknown</button>
+      </div>
+    </div>
+
+    <!-- Q16: DEBRIS -->
+    <div class="screen" id="screen-q16">
+      <div class="q-label" id="q16-label">Question 16</div>
+      <div class="q-title">Debris / water column? <button class="info-btn" onclick="showModal('debris')">ⓘ</button></div>
+      <button class="opt" id="debris-none-btn" onclick="selectDebrisNone(this)">None</button>
+      <button class="opt" data-val="surface" onclick="toggleMultiDebris(this)">Surface <span style="color:var(--cream3);font-size:13px">— floating scum, algae mats, pine needles</span></button>
+      <button class="opt" data-val="midCol" onclick="toggleMultiDebris(this)">Mid-column <span style="color:var(--cream3);font-size:13px">— suspended, waterlogged debris</span></button>
+      <button class="opt" data-val="bottom" onclick="toggleMultiDebris(this)">Bottom <span style="color:var(--cream3);font-size:13px">— thick bottom algae, settled debris</span></button>
+    </div>
+
+    <!-- Q17: LURES -->
+    <div class="screen" id="screen-q17">
+      <div class="q-label" id="q17-label">Question 17</div>
+      <div class="q-title">Lures available today?</div>
+      <div class="q-subtitle">Everything is selected — uncheck what you don't have</div>
+      <div id="lure-checklist"></div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="screen" id="screen-results">
+      <div id="results-output"></div>
+    </div>
+
+  </div><!-- end screen-wrap -->
+
+  <div id="bottom-nav">
+    <button class="nav-btn" id="btn-back" onclick="goBack()" style="display:none">← Back</button>
+    <button class="nav-btn" id="btn-next" onclick="goNext()" disabled>Continue →</button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" onclick="closeModal()">
+  <div id="modal-box" onclick="event.stopPropagation()">
+    <div id="modal-title"></div>
+    <div id="modal-content"></div>
+    <button id="modal-close" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// PRESETS
+// ═══════════════════════════════════════════════════════════════
+const PRESETS = {
+  evergreen: {
+    name:'Evergreen Lake', displayName:'Evergreen',
+    type:'pond', region:'piedmont', depth:'shallowDeep', flow:'still', bottom:'silt',
+    exposure:'sheltered', features:['subGrass','algaeMats','overhangingVeg','openWater'],
+    subsurface:[], shoreline:['heavilyVeg','open'],
+    waterForage:['shad','bluegill','crayfish','juvenileBass'],
+    waterSpecies:['largemouth','bluegill','crappie'], access:['bank','kayak'],
+    notes:{cyanobacteria:true, shadNeverEliminated:true}
+  },
+  swiftCreek: {
+    name:'Swift Creek Reservoir', displayName:'Swift Creek',
+    type:'reservoir', region:'piedmont', depth:'mixed', flow:'still', bottom:'clay',
+    exposure:'semi', features:['docks','subGrass','laydowns','rockyPoints'],
+    subsurface:['ledges','channels','brushPiles'], shoreline:['docks','heavilyVeg'],
+    waterForage:['shad','bluegill'], waterSpecies:['largemouth','bluegill','crappie'],
+    access:['kayak'], notes:{generalKnowledge:true}
+  },
+  lakeAnna: {
+    name:'Lake Anna', displayName:'Lake Anna',
+    type:'reservoir', region:'piedmont', depth:'mixed', flow:'still', bottom:'sand',
+    exposure:'open', features:['docks','subGrass','rockyPoints'],
+    subsurface:['channels','ledges','humps'], shoreline:['docks'],
+    waterForage:['shad','bluegill'], waterSpecies:['largemouth','bluegill','crappie'],
+    access:['kayak'], notes:{warmDischarge:true, generalKnowledge:true}
+  },
+  kerrLake: {
+    name:'Kerr Lake (Buggs Island)', displayName:'Kerr Lake',
+    type:'reservoir', region:'southside', depth:'mixed', flow:'still', bottom:'mixed',
+    exposure:'open', features:['laydowns','rockyPoints','openWater'],
+    subsurface:['channels','ledges','humps','brushPiles'], shoreline:['wooded','open'],
+    waterForage:['shad'], waterSpecies:['largemouth','bluegill','crappie'],
+    access:['kayak'], notes:{generalKnowledge:true}
+  },
+  jamesUpper: {
+    name:'James River — Upper', displayName:'James — Upper',
+    type:'river', region:'shenandoah', depth:'mixed', flow:'strong', bottom:'gravel',
+    exposure:'semi', features:['rockyPoints','currentSeams','laydowns','openWater'],
+    subsurface:['channels','ledges'], shoreline:['wooded','open'],
+    waterForage:['crayfish','shad','bluegill'], waterSpecies:['smallmouth','spotted','redbreast','rockBass'],
+    access:['kayak','wade'], notes:{smallmouthActive:true}
+  },
+  jamesMiddle: {
+    name:'James River — Middle', displayName:'James — Middle',
+    type:'river', region:'piedmont', depth:'mixed', flow:'moderate', bottom:'mixed',
+    exposure:'semi', features:['rockyPoints','currentSeams','laydowns','subGrass'],
+    subsurface:['channels','brushPiles'], shoreline:['wooded','open'],
+    waterForage:['shad','crayfish','bluegill'],
+    waterSpecies:['smallmouth','largemouth','spotted','redbreast','rockBass'],
+    access:['kayak','wade','bank'], notes:{smallmouthActive:true}
+  },
+  jamesLower: {
+    name:'James River — Lower/Tidal', displayName:'James — Tidal',
+    type:'tidal', region:'tidewater', depth:'mixed', flow:'moderate', bottom:'mixed',
+    exposure:'semi', features:['laydowns','docks','subGrass','currentSeams'],
+    subsurface:['channels','ledges'], shoreline:['wooded','open'],
+    waterForage:['shad','bluegill','crayfish'],
+    waterSpecies:['largemouth','bluegill','crappie'],
+    access:['kayak'], notes:{tidalNote:true}
+  },
+  custom: {
+    name:'Unlisted Water Body', displayName:'Custom',
+    type:'', region:'', depth:'', flow:'', bottom:'', exposure:'',
+    features:[], subsurface:[], shoreline:[], waterForage:[], waterSpecies:[], access:[], notes:{}
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// LURE INVENTORY
+// ═══════════════════════════════════════════════════════════════
+const LURES = [
+  // TOPWATER
+  {id:'hollow_frog',name:'Hollow Body Frog',cat:'Topwater',rods:['bc_h'],col:['white belly/dark top','chartreuse','black']},
+  {id:'popper_small',name:'Hard Body Popper (1")',cat:'Topwater',rods:['spinning_ul','spinning_l'],col:['black','silver','green','yellow','red']},
+  {id:'popper_large',name:'Hard Body Popper (2–3")',cat:'Topwater',rods:['spinning_l','spinning_m','bc_m','bc_mh'],col:['black','silver','green','yellow','red']},
+  {id:'torpedo',name:'Heddon Torpedo',cat:'Topwater',rods:['bc_m','bc_mh'],col:['natural']},
+  {id:'whopper_plopper',name:'Whopper Plopper-Style',cat:'Topwater',rods:['bc_m','bc_mh'],col:['white','natural']},
+  {id:'walker',name:'Topwater Walker',cat:'Topwater',rods:['bc_m','bc_mh'],col:['chrome','bone','black']},
+  {id:'rebel_float',name:'Rebel-Style Float',cat:'Topwater',rods:['spinning_ul'],col:['silver','white','mixed natural']},
+  // BLADED JIG / SWIM JIG
+  {id:'bladed_jig',name:'Bladed Jig',cat:'Bladed Jig',rods:['bc_m','bc_mh'],col:['white','white/chartreuse','blue/black','bluegill','green pumpkin']},
+  {id:'swim_jig',name:'Swim Jig',cat:'Bladed Jig',rods:['bc_m','bc_mh'],col:['black','white','green pumpkin','sexy shad','bluegill','chartreuse']},
+  // SPINNERBAIT
+  {id:'spinnerbait',name:'Spinnerbait',cat:'Spinnerbait',rods:['bc_m','bc_mh'],col:['white','white/chartreuse','white/blue','bluegill','sexy shad']},
+  {id:'beetle_spin',name:'Beetle Spin',cat:'Spinnerbait',rods:['spinning_ul','spinning_l'],col:['black','yellow','white','green','orange']},
+  {id:'rooster_tail',name:'Inline Spinner / Rooster Tail',cat:'Spinnerbait',rods:['spinning_ul','spinning_l'],col:['white','black','chartreuse']},
+  // CRANKBAIT
+  {id:'crank_shallow',name:'Shallow Crankbait',cat:'Crankbait',rods:['bc_m','bc_mh','spinning_l','spinning_m'],col:['silver','red','sexy shad','perch','green shades']},
+  {id:'crank_deep',name:'Deep Crankbait',cat:'Crankbait',rods:['bc_m','bc_mh'],col:['silver','red','sexy shad','perch']},
+  {id:'lipless_small',name:'Lipless Crankbait (small)',cat:'Crankbait',rods:['spinning_ul','spinning_l'],col:['silver','red','sexy shad','perch']},
+  {id:'lipless_large',name:'Lipless Crankbait (large)',cat:'Crankbait',rods:['bc_m','bc_mh'],col:['silver','red','sexy shad']},
+  {id:'jerkbait',name:'Jerkbait',cat:'Crankbait',rods:['bc_m','bc_mh','spinning_l','spinning_m'],col:['natural','silver','translucent']},
+  // JIGS
+  {id:'football_jig',name:'Football Jig',cat:'Jig',rods:['bc_mh','bc_h'],col:['black','green pumpkin','sexy shad']},
+  {id:'flipping_jig',name:'Flipping Jig',cat:'Jig',rods:['bc_mh','bc_h'],col:['black','white','green pumpkin','bluegill']},
+  {id:'hair_jig',name:'Hair Jig / Marabou',cat:'Jig',rods:['spinning_ul','spinning_l','bc_m'],col:['white','chartreuse','black']},
+  {id:'panfish_jig',name:'Micro / Panfish Jig',cat:'Jig',rods:['spinning_ul'],col:['black/green','chartreuse','white']},
+  // SOFT PLASTICS
+  {id:'senko',name:'Senko / Stick Bait',cat:'Soft Plastic',rods:['spinning_ul','spinning_l','bc_m'],col:['green pumpkin','blue','junebug','gp/chartreuse tip','gp/pink tip']},
+  {id:'creature_lizard',name:'Creature Bait — Lizard',cat:'Soft Plastic',rods:['bc_m','bc_mh'],col:['white','black','blue','green pumpkin']},
+  {id:'creature_beaver',name:'Creature Bait — Beaver',cat:'Soft Plastic',rods:['bc_m','bc_mh'],col:['white','black','blue','green pumpkin']},
+  {id:'creature_bug',name:'Creature Bait — Bug',cat:'Soft Plastic',rods:['bc_m','bc_mh','spinning_l'],col:['white','black','blue','green pumpkin']},
+  {id:'paddle_dinger',name:"Yum Thump'n Dinger",cat:'Soft Plastic',rods:['spinning_ul','spinning_l','bc_m'],col:['green/white','black']},
+  {id:'paddle_fattyz',name:'ZMan TRD FattyZ',cat:'Soft Plastic',rods:['spinning_ul','spinning_l'],col:['various']},
+  {id:'swimbait_small',name:'Swimbait (2" paddle tail)',cat:'Soft Plastic',rods:['spinning_ul','spinning_l'],col:['white','chartreuse','natural']},
+  {id:'swimbait_large',name:'Swimbait (large paddle tail)',cat:'Soft Plastic',rods:['bc_m','bc_mh'],col:['white']},
+  {id:'finesse_worm',name:'Finesse Worm / Roboworm',cat:'Soft Plastic',rods:['spinning_ul','spinning_l'],col:['various']},
+  {id:'tube_trd',name:'ZMan TRD Tube',cat:'Soft Plastic',rods:['spinning_ul'],col:['various']},
+  {id:'tube_sk',name:'Strike King Tube',cat:'Soft Plastic',rods:['spinning_l','spinning_m','bc_m'],col:['various']},
+  {id:'tube_micro',name:'Micro Tube (panfish)',cat:'Soft Plastic',rods:['spinning_ul'],col:['chartreuse','white']},
+  {id:'curly_grub',name:'Curly Tail Grub',cat:'Soft Plastic',rods:['spinning_ul','spinning_l'],col:['white','black','chartreuse','green shades']},
+  // TRAILERS
+  {id:'rage_chunk',name:'Rage Tail Chunk',cat:'Trailer',rods:[],col:['green pumpkin','watermelon red','white','blue']},
+  {id:'rage_menace',name:'Rage Tail Menace',cat:'Trailer',rods:[],col:['green pumpkin','watermelon red','white','blue']},
+  {id:'goatz',name:'ZMan GoatZ',cat:'Trailer',rods:[],col:['green pumpkin','watermelon red','white','blue']},
+  {id:'baby_goatz',name:'ZMan Baby GoatZ',cat:'Trailer',rods:[],col:['green pumpkin','watermelon red','white','blue']},
+  {id:'ned_crawz',name:'ZMan TRD CrawZ',cat:'Trailer',rods:[],col:['various']},
+  {id:'ned_bugz',name:'ZMan TRD BugZ',cat:'Trailer',rods:[],col:['various']},
+  {id:'ned_trd',name:'ZMan Finesse TRD',cat:'Trailer',rods:[],col:['various']},
+  {id:'turbo_fatty',name:'ZMan Turbo FattyZ',cat:'Trailer',rods:[],col:['various']},
+  {id:'diezel_minnow',name:'ZMan Diezel MinnowZ',cat:'Trailer',rods:[],col:['blue','green','white']},
+  {id:'chattershadz',name:'ZMan ChatterShadZ',cat:'Trailer',rods:[],col:['blue','green','white']},
+  {id:'trad_paddle',name:'Traditional Paddle Tail',cat:'Trailer',rods:[],col:['blue','green','white','silver']},
+  // FLIES
+  {id:'fly_foam_popper',name:'Silli-Leg Foam Popper',cat:'Fly',rods:['fly_4wt','fly_5wt'],col:['chartreuse','black','natural green']},
+  {id:'fly_atom_ant',name:'Atom Ant Foam Popper',cat:'Fly',rods:['fly_3wt','fly_4wt'],col:['black','natural']},
+  {id:'fly_beetle',name:'Foam Beetle',cat:'Fly',rods:['fly_3wt','fly_4wt'],col:['black','natural']},
+  {id:'fly_hard_popper',name:'Hard Body Fly Popper',cat:'Fly',rods:['fly_4wt','fly_5wt'],col:['black','silver','green','yellow']},
+  {id:'fly_nymph',name:'Bead-Headed Nymph',cat:'Fly',rods:['fly_3wt','fly_4wt','fly_5wt'],col:['olive','black','natural']},
+  {id:'fly_woolly',name:'Woolly Bugger',cat:'Fly',rods:['fly_4wt','fly_5wt','fly_8wt'],col:['olive','black']},
+  {id:'fly_clouser',name:'Clouser Minnow',cat:'Fly',rods:['fly_4wt','fly_5wt','fly_8wt'],col:['chartreuse/white','olive/white']},
+  {id:'fly_streamer',name:'Streamer (general)',cat:'Fly',rods:['fly_4wt','fly_5wt','fly_8wt'],col:['various']}
+];
+
+// ═══════════════════════════════════════════════════════════════
+// SESSION STATE
+// ═══════════════════════════════════════════════════════════════
+let S = {}, currentScreen = 'welcome', SCREENS = [];
+
+function resetState() {
+  S = {
+    presetId: null,
+    // Water body details
+    wb: { type:'', region:'', depth:'', flow:'', bottom:'', exposure:'',
+          features:[], subsurface:[], shoreline:[], waterForage:[], waterSpecies:[], access:[] },
+    // Session
+    species: [], bassGoal: null, season: null,
+    waterTemp: null, waterTempLabel: null,
+    timePeriods: [], rods: [], flyLine: null,
+    sky: [], recentWeather: [], rainfall: null,
+    clarity: null, wind: null, forage: null, pressure: null,
+    debris: ['none'], deselectedLures: []
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function buildFlow() {
+  const flow = ['q1','q1b','q2'];
+  if (S.species.includes('bass')) flow.push('q3');
+  flow.push('q4','q5','q6','q7');
+  if (S.rods.some(r => r.startsWith('fly_'))) flow.push('q8');
+  flow.push('q9','q10','q11','q12','q13','q14','q15','q16','q17');
+  return flow;
+}
+
+
+
+function showScreen(id) {
+  populateScreenBeforeShow(id);
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  currentScreen = id;
+  updateProgress();
+  updateNav();
+  document.getElementById('screen-' + id).scrollTop = 0;
+}
+
+function updateProgress() {
+  if (currentScreen === 'welcome' || currentScreen === 'results') {
+    document.getElementById('progress-bar').style.width = currentScreen === 'results' ? '100%' : '0%';
+    document.getElementById('progress-label').textContent = '';
+    return;
+  }
+  const flow = SCREENS;
+  const idx = flow.indexOf(currentScreen);
+  if (idx < 0) return;
+  const total = flow.length;
+  const pct = Math.round(((idx + 1) / total) * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `${idx + 1} of ${total}`;
+}
+
+function updateNav() {
+  const back = document.getElementById('btn-back');
+  const next = document.getElementById('btn-next');
+  const isWelcome = currentScreen === 'welcome';
+  const isResults = currentScreen === 'results';
+  if (isWelcome) {
+    document.getElementById('header').style.display = 'none';
+    document.getElementById('progress-bar-wrap').style.display = 'none';
+    back.style.display = 'none';
+    next.style.display = 'none';
+    return;
+  }
+  document.getElementById('header').style.display = 'flex';
+  document.getElementById('progress-bar-wrap').style.display = 'block';
+  if (isResults) {
+    document.getElementById('header').style.display = 'flex';
+    document.getElementById('progress-bar-wrap').style.display = 'block';
+    back.style.display = 'block';
+    back.textContent = '← Back';
+    next.style.display = 'none';
+    return;
+  }
+  back.style.display = 'block';
+  back.textContent = '← Back';
+  next.style.display = 'block';
+  const isLast = SCREENS.indexOf(currentScreen) === SCREENS.length - 1;
+  next.textContent = isLast ? 'Get Recommendations →' : 'Continue →';
+  next.disabled = !canAdvance();
+}
+
+function canAdvance() {
+  switch(currentScreen) {
+    case 'q1': return !!S.presetId;
+    case 'q1b': return !!S.wb.type && !!S.wb.region;
+    case 'q2': return S.species.length > 0;
+    case 'q3': return !!S.bassGoal && !(S.bassGoal === 'hedge' && S.rods.length < 2);
+    case 'q4': return !!S.season;
+    case 'q5': return !!S.waterTemp;
+    case 'q6': return S.timePeriods.length > 0;
+    case 'q7': return S.rods.length > 0;
+    case 'q8': return !!S.flyLine;
+    case 'q9': return S.sky.length > 0;
+    case 'q10': return S.recentWeather.length > 0;
+    case 'q11': return !!S.rainfall;
+    case 'q12': return !!S.clarity;
+    case 'q13': return !!S.wind;
+    case 'q14': return !!S.forage;
+    case 'q15': return !!S.pressure;
+    case 'q16': return S.debris.length > 0;
+    case 'q17': return true;
+    default: return true;
+  }
+}
+
+function goNext() {
+  if (!canAdvance()) return;
+  if (currentScreen === 'q9' && !validateQ9()) return;
+  if (currentScreen === 'q10' && !validateQ10()) return;
+  const idx = SCREENS.indexOf(currentScreen);
+  if (idx < SCREENS.length - 1) {
+    showScreen(SCREENS[idx + 1]);
+  } else {
+    generateAndShow();
+  }
+}
+
+function goBack() {
+  if (currentScreen === 'results') {
+    showScreen(SCREENS[SCREENS.length - 1]);
+    return;
+  }
+  const idx = SCREENS.indexOf(currentScreen);
+  if (idx > 0) showScreen(SCREENS[idx - 1]);
+  else showScreen('welcome');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WELCOME / SESSION START
+// ═══════════════════════════════════════════════════════════════
+function checkCarryForward() {
+  try {
+    const saved = localStorage.getItem('strikeModel_lastSession');
+    if (saved) {
+      const data = JSON.parse(saved);
+      const btn = document.getElementById('btn-continue');
+      const label = document.getElementById('continue-label');
+      const presetName = data.presetId && PRESETS[data.presetId] ? PRESETS[data.presetId].displayName : 'last session';
+      label.textContent = presetName;
+      btn.style.display = 'block';
+      btn._savedData = data;
+    }
+  } catch(e) {}
+}
+
+function startNew() {
+  resetState();
+  // Clear all button highlights from prior session
+  document.querySelectorAll('.opt.selected').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.lure-check-box.checked').forEach(b => {
+    b.classList.remove('checked'); b.textContent = '';
+  });
+  SCREENS = buildFlow();
+  showScreen('q1');
+}
+
+function startContinue() {
+  try {
+    const btn = document.getElementById('btn-continue');
+    const data = btn._savedData;
+    if (!data) { startNew(); return; }
+    S = data;
+    // Always use full flow — carry-forward just starts at Q9 going forward
+    // but back-navigation can reach any prior question
+    SCREENS = buildFlow();
+    if (S.forage === 'unknown') S.forage = getSeasonalForage(S.season);
+    if (S.deselectedLures && S.deselectedLures.length > 0) {
+      buildLureChecklist();
+      showScreen('q17');
+    } else {
+      showScreen('q9');
+    }
+    updateLabels();
+  } catch(e) { startNew(); }
+}
+
+function getSeasonalForage(season) {
+  const map = { winter:'unknown', preSpawn:'crayfish', spawn:'bluegill', postSpawn:'bluegill',
+                summer:'shad', fall:'shad' };
+  return map[season] || 'unknown';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PRESET SELECTION
+// ═══════════════════════════════════════════════════════════════
+function selectPreset(id, btn) {
+  S.presetId = id;
+  document.querySelectorAll('#screen-q1 .opt').forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+  if (id !== 'custom') {
+    const p = PRESETS[id];
+    S.wb = {
+      type: p.type, region: p.region, depth: p.depth, flow: p.flow,
+      bottom: p.bottom, exposure: p.exposure, features: [...p.features],
+      subsurface: [...p.subsurface], shoreline: [...p.shoreline],
+      waterForage: [...p.waterForage], waterSpecies: [...p.waterSpecies],
+      access: [...p.access]
+    };
+  } else {
+    S.wb = { type:'', region:'', depth:'', flow:'', bottom:'', exposure:'',
+             features:[], subsurface:[], shoreline:[], waterForage:[], waterSpecies:[], access:[] };
+  }
+  updateNav();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Q1.5 WATER BODY DETAILS
+// ═══════════════════════════════════════════════════════════════
+function populateWBScreen() {
+  const p = S.presetId !== 'custom' ? PRESETS[S.presetId] : null;
+  document.getElementById('q1b-title').textContent = p ? p.name : 'Describe Your Water Body';
+  document.getElementById('q1b-subtitle').textContent = p
+    ? 'Pre-filled from your selection — tap any section to review or change'
+    : 'Answer what you know — Unknown is fine for anything you\'re unsure of';
+
+  // Restore selections from S.wb
+  refreshWBButtons();
+  updateAccMetas();
+
+  // Hide subsurface for pond/tidal
+  const hideSub = S.wb.type === 'pond' || S.wb.type === 'tidal';
+  document.getElementById('acc-subsurface').style.display = hideSub ? 'none' : 'block';
+
+  // Auto-open identity for custom
+  if (S.presetId === 'custom') {
+    openAcc('identity');
+  }
+}
+
+function refreshWBButtons() {
+  // Type buttons - match by data stored on each button
+  document.querySelectorAll('#wb-type-opts .opt').forEach(b => {
+    const v = b.getAttribute('data-wb-val');
+    if (v) b.classList.toggle('selected', S.wb.type === v);
+  });
+  // Single-select fields
+  ['depth','flow','bottom','exposure'].forEach(field => {
+    document.querySelectorAll(`#wb-${field}-opts .opt`).forEach(b => {
+      const v = b.getAttribute('data-wb-val');
+      if (v) b.classList.toggle('selected', S.wb[field] === v);
+    });
+  });
+  // Region
+  document.querySelectorAll('#wb-region-opts .opt').forEach(b => {
+    const v = b.getAttribute('data-wb-val');
+    if (v) b.classList.toggle('selected', S.wb.region === v);
+  });
+  // Multi-selects
+  document.querySelectorAll('#wb-features-opts .opt').forEach(b => {
+    const v = b.getAttribute('data-wb-val');
+    if (v) b.classList.toggle('selected', S.wb.features.includes(v));
+  });
+  document.querySelectorAll('#wb-subsurface-opts .opt').forEach(b => {
+    const v = b.getAttribute('data-wb-val');
+    if (v) b.classList.toggle('selected', S.wb.subsurface.includes(v));
+  });
+  document.querySelectorAll('#wb-shoreline-opts .opt').forEach(b => {
+    const v = b.getAttribute('data-wb-val');
+    if (v) b.classList.toggle('selected', S.wb.shoreline.includes(v));
+  });
+  document.querySelectorAll('#wb-forage-opts .opt').forEach(b => {
+    const v = b.getAttribute('data-wb-val');
+    if (v) b.classList.toggle('selected', S.wb.waterForage.includes(v));
+  });
+  document.querySelectorAll('#wb-species-opts .opt').forEach(b => {
+    const v = b.getAttribute('data-wb-val');
+    if (v) b.classList.toggle('selected', S.wb.waterSpecies.includes(v));
+  });
+  document.querySelectorAll('#wb-access-opts .opt').forEach(b => {
+    const v = b.getAttribute('data-wb-val');
+    if (v) b.classList.toggle('selected', S.wb.access.includes(v));
+  });
+}
+
+function updateAccMetas() {
+  document.getElementById('acc-identity-meta').textContent = S.wb.type ? typeName(S.wb.type) : '';
+  document.getElementById('acc-physical-meta').textContent = S.wb.bottom ? S.wb.bottom : '';
+  document.getElementById('acc-features-meta').textContent = S.wb.features.length + ' selected';
+  document.getElementById('acc-subsurface-meta').textContent = S.wb.subsurface.length + ' selected';
+  document.getElementById('acc-shoreline-meta').textContent = S.wb.shoreline.length + ' selected';
+  document.getElementById('acc-forage-meta').textContent = S.wb.waterForage.length + ' selected';
+  document.getElementById('acc-access-meta').textContent = S.wb.access.length + ' selected';
+}
+
+function typeName(t) {
+  const m = {pond:'Pond/Small Lake', lakeMed:'Lake—Medium', lakeLarge:'Lake—Large',
+             reservoir:'Reservoir', river:'River', tidal:'Tidal River'};
+  return m[t] || t;
+}
+
+function toggleAcc(key) {
+  const body = document.getElementById(`acc-${key}-body`);
+  const arrow = document.getElementById(`acc-${key}-arrow`);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  arrow.classList.toggle('open', !isOpen);
+}
+
+function openAcc(key) {
+  document.getElementById(`acc-${key}-body`).classList.add('open');
+  document.getElementById(`acc-${key}-arrow`).classList.add('open');
+}
+
+function setWB(field, val) {
+  S.wb[field] = val;
+  refreshWBButtons();
+  updateAccMetas();
+  if (field === 'type') {
+    const hideSub = val === 'pond' || val === 'tidal';
+    document.getElementById('acc-subsurface').style.display = hideSub ? 'none' : 'block';
+  }
+  updateNav();
+}
+
+function toggleWBFeature(val) {
+  toggleArr(S.wb.features, val);
+  if (val === 'unknown') S.wb.features = ['unknown'];
+  else S.wb.features = S.wb.features.filter(v => v !== 'unknown');
+  refreshWBButtons(); updateAccMetas(); updateNav();
+}
+function toggleWBSub(val) {
+  toggleArr(S.wb.subsurface, val);
+  if (val === 'unknown') S.wb.subsurface = ['unknown'];
+  else S.wb.subsurface = S.wb.subsurface.filter(v => v !== 'unknown');
+  refreshWBButtons(); updateAccMetas(); updateNav();
+}
+function toggleWBShore(val) { toggleArr(S.wb.shoreline, val); refreshWBButtons(); updateAccMetas(); updateNav(); }
+function toggleWBForage(val) {
+  toggleArr(S.wb.waterForage, val);
+  if (val === 'unknown') S.wb.waterForage = ['unknown'];
+  else S.wb.waterForage = S.wb.waterForage.filter(v => v !== 'unknown');
+  refreshWBButtons(); updateAccMetas(); updateNav();
+}
+function toggleWBSpecies(val) { toggleArr(S.wb.waterSpecies, val); refreshWBButtons(); updateAccMetas(); updateNav(); }
+function toggleWBAccess(val) { toggleArr(S.wb.access, val); refreshWBButtons(); updateAccMetas(); updateNav(); }
+
+function toggleArr(arr, val) {
+  const i = arr.indexOf(val);
+  if (i >= 0) arr.splice(i, 1); else arr.push(val);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SESSION QUESTION HANDLERS
+// ═══════════════════════════════════════════════════════════════
+function setSpecies(val, btn) {
+  if (val === 'bass') S.species = ['bass'];
+  else if (val === 'panfish') {
+    S.species = ['panfish'];
+    S.bassGoal = null; // clear bass goal — not applicable for panfish-only
+  }
+  else S.species = ['bass','panfish'];
+  document.querySelectorAll('#screen-q2 .opt').forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+  updateNav();
+}
+
+function setGoal(val, btn) {
+  S.bassGoal = val;
+  document.querySelectorAll('#screen-q3 .opt').forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+  document.getElementById('go-big-panfish-note').style.display = (val === 'goBig' && S.species.includes('panfish')) ? 'block' : 'none';
+  updateNav();
+}
+
+function setSeason(val, btn) {
+  S.season = val;
+  document.querySelectorAll('#screen-q4 .opt').forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+  const tempMap = { winter:52, preSpawn:57, spawn:66, postSpawn:71, summer:82, fall:62 };
+  const labelMap = { winter:'50–55°F', preSpawn:'55–60°F', spawn:'65–68°F', postSpawn:'68–75°F', summer:'80–85°F', fall:'60–65°F' };
+  if (tempMap[val]) { S.waterTemp = tempMap[val]; S.waterTempLabel = labelMap[val]; }
+  if (!S.forage || S.forage === 'unknown') S.forage = getSeasonalForage(val);
+  updateNav();
+}
+
+function setTemp(val, label, btn) {
+  S.waterTemp = val; S.waterTempLabel = label;
+  document.querySelectorAll('#temp-opts .opt').forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+  updateNav();
+}
+
+function setSingle(key, val, btn) {
+  S[key] = val;
+  const screen = currentScreen;
+  document.querySelectorAll(`#screen-${screen} .opt`).forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+  updateNav();
+}
+
+function toggleMulti(btn) {
+  const q = btn.dataset.q; const v = btn.dataset.val;
+  btn.classList.toggle('selected');
+  if (!S[q]) S[q] = [];
+  if (btn.classList.contains('selected')) { if (!S[q].includes(v)) S[q].push(v); }
+  else S[q] = S[q].filter(x => x !== v);
+  updateNav();
+}
+
+function toggleRod(btn) {
+  const v = btn.dataset.val;
+  btn.classList.toggle('selected');
+  if (btn.classList.contains('selected')) {
+    if (!S.rods.includes(v)) S.rods.push(v);
+    // If fly rod selected, deselect all non-fly
+    if (v.startsWith('fly_')) {
+      S.rods = S.rods.filter(r => r.startsWith('fly_'));
+      document.querySelectorAll('[data-q="rods"]').forEach(b => {
+        if (!b.dataset.val.startsWith('fly_')) b.classList.remove('selected');
+      });
+    } else {
+      // If non-fly, deselect all fly
+      S.rods = S.rods.filter(r => !r.startsWith('fly_'));
+      document.querySelectorAll('[data-q="rods"]').forEach(b => {
+        if (b.dataset.val.startsWith('fly_')) b.classList.remove('selected');
+      });
+    }
+  } else {
+    S.rods = S.rods.filter(x => x !== v);
+  }
+  updateNav();
+}
+
+function selectAllRods() {
+  S.rods = ['spinning_ul','spinning_l','spinning_m','bc_bfs','bc_m','bc_mh','bc_h'];
+  document.querySelectorAll('[data-q="rods"]').forEach(b => {
+    b.classList.toggle('selected', S.rods.includes(b.dataset.val));
+  });
+  updateNav();
+}
+
+function toggleSky(btn) {
+  const v = btn.dataset.val;
+  btn.classList.toggle('selected');
+  if (btn.classList.contains('selected')) {
+    if (!S.sky.includes(v)) S.sky.push(v);
+  } else {
+    S.sky = S.sky.filter(x => x !== v);
+  }
+  updateNav();
+}
+
+function validateQ9() {
+  const el = document.getElementById('q9-validation');
+  if (S.sky.includes('clear') && S.sky.includes('overcast')) {
+    el.textContent = 'Clear and overcast are contradictory — please select one sky condition.';
+    el.classList.add('show'); return false;
+  }
+  if (S.sky.includes('frontMovingIn') && S.sky.includes('stormPassed')) {
+    el.textContent = 'Cold front moving in and sky clearing are contradictory — please select one.';
+    el.classList.add('show'); return false;
+  }
+  el.classList.remove('show'); return true;
+}
+
+function toggleWeather(btn) {
+  const v = btn.dataset.val;
+  btn.classList.toggle('selected');
+  if (btn.classList.contains('selected')) {
+    if (!S.recentWeather.includes(v)) S.recentWeather.push(v);
+  } else {
+    S.recentWeather = S.recentWeather.filter(x => x !== v);
+  }
+  updateNav();
+}
+
+function validateQ10() {
+  const el = document.getElementById('q10-validation');
+  if (S.recentWeather.includes('postFront48') && S.sky.includes('frontMovingIn')) {
+    el.textContent = 'Post-cold-front and cold front moving in are contradictory.';
+    el.classList.add('show'); return false;
+  }
+  el.classList.remove('show'); return true;
+}
+
+function selectDebrisNone(btn) {
+  document.querySelectorAll('#screen-q16 .opt').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  S.debris = ['none'];
+  updateNav();
+}
+
+function toggleMultiDebris(btn) {
+  const noneBtn = document.getElementById('debris-none-btn');
+  if (noneBtn) noneBtn.classList.remove('selected');
+  S.debris = S.debris.filter(x => x !== 'none');
+  const v = btn.dataset.val;
+  btn.classList.toggle('selected');
+  if (btn.classList.contains('selected')) { if (!S.debris.includes(v)) S.debris.push(v); }
+  else S.debris = S.debris.filter(x => x !== v);
+  if (S.debris.length === 0) {
+    S.debris = ['none'];
+    if (noneBtn) noneBtn.classList.add('selected');
+  }
+  updateNav();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LURE CHECKLIST
+// ═══════════════════════════════════════════════════════════════
+function buildLureChecklist() {
+  const isFly = S.rods.some(r => r.startsWith('fly_'));
+  const cats = isFly ? ['Fly'] : ['Topwater','Bladed Jig','Spinnerbait','Crankbait','Jig','Soft Plastic','Trailer'];
+  let html = '';
+  cats.forEach(cat => {
+    const items = LURES.filter(l => l.cat === cat);
+    if (!items.length) return;
+    html += `<div class="lure-cat-header" onclick="toggleLureCat(this)">
+      <span class="lure-cat-title">${cat}</span>
+      <span style="color:var(--cream3);font-size:12px">▾</span>
+    </div>
+    <div class="lure-cat-body" style="display:block">`;
+    items.forEach(l => {
+      const checked = !S.deselectedLures.includes(l.id);
+      html += `<div class="lure-check-row">
+        <span class="lure-check-name">${l.name}</span>
+        <div class="lure-check-box ${checked?'checked':''}" onclick="toggleLure('${l.id}',this)">${checked?'✓':''}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  document.getElementById('lure-checklist').innerHTML = html;
+}
+
+function toggleLure(id, el) {
+  if (S.deselectedLures.includes(id)) {
+    S.deselectedLures = S.deselectedLures.filter(x => x !== id);
+    el.classList.add('checked'); el.textContent = '✓';
+  } else {
+    S.deselectedLures.push(id);
+    el.classList.remove('checked'); el.textContent = '';
+  }
+}
+
+function toggleLureCat(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('span:last-child');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  arrow.textContent = open ? '▸' : '▾';
+}
+
+function hasLure(id) { return !S.deselectedLures.includes(id); }
+
+// ═══════════════════════════════════════════════════════════════
+// BITE QUALITY ENGINE
+// ═══════════════════════════════════════════════════════════════
+// 5 tiers: POOR=0, SLOW=1, MODERATE=2, GOOD=3, EXCELLENT=4
+const BQ = {POOR:0, SLOW:1, MODERATE:2, GOOD:3, EXCELLENT:4};
+const BQ_LABELS = ['POOR','SLOW','MODERATE','GOOD','EXCELLENT'];
+const BQ_CLASSES = ['bite-poor','bite-slow','bite-moderate','bite-good','bite-excellent'];
+
+function clamp(v, min=0, max=4) { return Math.max(min, Math.min(max, Math.round(v))); }
+
+function getWeatherPrecedence() {
+  // Q10 multi-select precedence: postFront48 > postFront48plus > warmingTrend > stable > unknown
+  const w = S.recentWeather;
+  if (w.includes('postFront48')) return 'postFront48';
+  if (w.includes('postFront48plus')) return 'postFront48plus';
+  if (w.includes('warmingTrend')) return 'warmingTrend';
+  if (w.includes('stable')) return 'stable';
+  return 'unknown';
+}
+
+function calcBiteQuality() {
+  const temp = S.waterTemp;
+  const weather = getWeatherPrecedence();
+  const isSmallmouth = S.wb.waterSpecies.includes('smallmouth') || S.wb.waterSpecies.includes('spotted')
+    || (S.wb.type === 'river');
+  const hasDawn = S.timePeriods.includes('dawn') || S.timePeriods.includes('dusk');
+
+  // Step 1: Primary matrix
+  let bq;
+  if (temp <= 49) bq = BQ.POOR;
+  else if (temp <= 54) {
+    if (weather === 'postFront48') bq = BQ.POOR;
+    else if (weather === 'warmingTrend') bq = BQ.MODERATE; // warming trend lifts activity even in cold water
+    else bq = BQ.SLOW;
+  } else if (temp <= 59) {
+    if (weather === 'postFront48') bq = isSmallmouth ? BQ.SLOW : BQ.POOR;
+    else if (weather === 'postFront48plus') bq = BQ.MODERATE; // 48+ hrs recovery at cool temps — fish have had time to rebound
+    else if (weather === 'warmingTrend') bq = BQ.GOOD;
+    else bq = BQ.MODERATE;
+  } else if (temp <= 67) {
+    if (weather === 'postFront48') bq = BQ.SLOW;
+    else if (weather === 'warmingTrend') bq = BQ.GOOD;
+    else bq = BQ.GOOD;
+  } else if (temp <= 74) {
+    if (weather === 'postFront48') bq = BQ.MODERATE;
+    else bq = BQ.EXCELLENT;
+  } else if (temp <= 84) {
+    if (weather === 'postFront48') bq = BQ.MODERATE;
+    else if (hasDawn) bq = BQ.GOOD;
+    else bq = BQ.MODERATE;
+  } else {
+    bq = BQ.POOR;
+  }
+
+  // Step 2: Metabolic floor
+  if (temp <= 49) bq = Math.min(bq, BQ.MODERATE);
+
+  // Step 3: Cold front moving in
+  if (S.sky.includes('frontMovingIn')) {
+    const cap = temp <= 49 ? BQ.MODERATE : BQ.EXCELLENT;
+    bq = Math.min(bq + 2, cap);
+    return { bq, skipModifiers: true };
+  }
+
+  // Step 4: Bluebird post-front downgrade
+  const isPostFront = S.recentWeather.some(w => w.startsWith('postFront'));
+  const isBluebird = isPostFront && S.sky.includes('clear') && S.wind === 'calm';
+  if (isBluebird) { bq = clamp(bq - 1); return { bq, bluebird: true }; }
+
+  // Step 5: Post-front recovery upgrade
+  const isRecovery = isPostFront && S.sky.includes('overcast') && (S.wind === 'moderate' || S.wind === 'strong');
+  if (isRecovery) bq = clamp(bq + 1);
+
+  // Step 6 (removed - sky clearing standalone)
+
+  // Step 7: Precipitation
+  if (S.rainfall === 'lightNow' || S.rainfall === 'lightRecent') bq = clamp(bq + 1);
+
+  return { bq };
+}
+
+function getBiteLabel(bq) { return BQ_LABELS[bq] || 'UNKNOWN'; }
+function getBiteClass(bq) { return BQ_CLASSES[bq] || ''; }
+
+// ═══════════════════════════════════════════════════════════════
+// ARCHETYPE DETECTION
+// ═══════════════════════════════════════════════════════════════
+function getArchetype() {
+  const type = S.wb.type;
+  const features = S.wb.features;
+  const bottom = S.wb.bottom;
+  const sub = S.wb.subsurface;
+
+  if (type === 'tidal') return 8;
+  if (type === 'reservoir') return 6;
+  if (type === 'river') {
+    const isRocky = bottom === 'gravel' || bottom === 'rock';
+    const hasRockyFeatures = features.includes('rockyPoints') || features.includes('currentSeams');
+    const isFlatwater = (bottom === 'silt' || bottom === 'sand') && (S.wb.flow === 'still' || S.wb.flow === 'slight');
+    // Rocky features (points/boulders/current seams) override flatwater classification
+    if (hasRockyFeatures || isRocky) return 4; // Rocky River
+    if (isFlatwater) return 5; // Flatwater / Backwater
+    return 4; // default river to rocky
+  }
+  // Lakes and ponds
+  if (features.includes('lilyPads') || features.includes('subGrass')) return 1; // Shallow Weedy
+  if (features.includes('docks') && (type === 'lakeMed' || type === 'lakeLarge')) return 3; // Dock Lake
+  if ((type === 'lakeMed' || type === 'lakeLarge') && (sub.includes('ledges') || sub.includes('channels'))) return 7; // Open Structure
+  return 2; // Open Pond default
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SPINNERBAIT BLADE
+// ═══════════════════════════════════════════════════════════════
+function getSpinnerbaitBlade(clarity, temp, bq) {
+  if (clarity === 'murky' || clarity === 'muddy' || temp < 60) return 'Colorado blade — max thump for lateral line trigger';
+  if ((clarity === 'clear' || clarity === 'lightly') && bq >= BQ.GOOD) return 'Willow blade — max flash for active fish';
+  return 'Willow + Colorado combo — versatile combination';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LURE SCORING
+// ═══════════════════════════════════════════════════════════════
+function scoreLures(bq, archetype) {
+  const temp = S.waterTemp;
+  const clarity = S.clarity;
+  const features = S.wb.features;
+  const sub = S.wb.subsurface;
+  const bottom = S.wb.bottom;
+  const season = S.season;
+  const forage = S.forage;
+  const hasDawn = S.timePeriods.includes('dawn') || S.timePeriods.includes('dusk');
+  const hasMidday = S.timePeriods.includes('midday');
+  const hasMorning = S.timePeriods.includes('morning');
+  const pressure = S.pressure;
+  const wind = S.wind;
+  const wbType = S.wb.type;
+  const isFall = season === 'fall';
+  const isPreSpawn = season === 'preSpawn';
+  const isWarmingTrend = S.recentWeather.includes('warmingTrend');
+  const isRecentPostFront = S.recentWeather.includes('postFront48');
+  const isPostFront = S.recentWeather.some(w => w.startsWith('postFront'));
+  const hasLilyPads = features.includes('lilyPads');
+  const hasLaydowns = features.includes('laydowns');
+  const hasDocks = features.includes('docks') || S.wb.shoreline.includes('docks');
+  const hasRockyPoints = features.includes('rockyPoints');
+  const hasCurrentSeams = features.includes('currentSeams');
+  const hasOpenWater = features.includes('openWater');
+  const hasSubGrass = features.includes('subGrass');
+  const hasOverhangingVeg = features.includes('overhangingVeg');
+  const hasAlgaeMats = features.includes('algaeMats');
+  const hasHeavilyVeg = S.wb.shoreline.includes('heavilyVeg');
+  const hasLedges = sub.includes('ledges') || sub.includes('channels');
+  const hasBrush = sub.includes('brushPiles');
+  const isSilt = bottom === 'silt';
+  const isRock = bottom === 'rock' || bottom === 'gravel';
+  const isSheltered = S.wb.exposure === 'sheltered';
+  const isMurky = clarity === 'murky' || clarity === 'muddy';
+  const isClearStained = clarity === 'clear' || clarity === 'lightly';
+  const heatStressed = temp >= 78 && !hasDawn;
+  const isSmallmouth = S.wb.waterSpecies.includes('smallmouth') || wbType === 'river';
+
+  // Gate check — only fires on recent post-front (within 48hrs), not 48+ hrs ago
+  const reactionGated = bq === BQ.POOR
+    || (isRecentPostFront && !isWarmingTrend)
+    || (temp < 55 && !(hasDawn && isPreSpawn && isWarmingTrend))
+    || heatStressed;
+
+  const scores = {};
+  function score(id, base) { scores[id] = (scores[id] || 0) + base; }
+  function suppress(id) { scores[id] = -99; }
+
+  // ── ARCHETYPE BASELINES ──
+  const archetypeBase = {
+    1: { swim_jig:75, bladed_jig:70, hollow_frog:70, senko:60, creature_beaver:55, flipping_jig:50 },
+    2: { senko:75, crank_shallow:65, finesse_worm:70, spinnerbait:60, jerkbait:35, lipless_large:60 },
+    3: { flipping_jig:80, swim_jig:65, crank_shallow:60, senko:65, spinnerbait:55 },
+    4: { tube_sk:80, hair_jig:75, crank_shallow:70, senko:65, jerkbait:65, spinnerbait:55 },
+    5: { swim_jig:70, bladed_jig:65, senko:70, lipless_large:60, spinnerbait:60, crank_shallow:60 },
+    6: { crank_deep:70, spinnerbait:65, lipless_large:70, swimbait_large:65, swim_jig:60, senko:60 },
+    7: { crank_deep:75, swimbait_large:70, lipless_large:65, football_jig:65, spinnerbait:65, senko:60 },
+    8: { swim_jig:70, spinnerbait:65, creature_beaver:65, senko:70, crank_shallow:60, flipping_jig:60 }
+  };
+  const base = archetypeBase[archetype] || archetypeBase[2];
+  Object.keys(base).forEach(id => score(id, base[id]));
+
+  // Default all unscored lures to 40
+  LURES.filter(l => !['Trailer','Fly'].includes(l.cat)).forEach(l => {
+    if (!scores[l.id]) scores[l.id] = 40;
+  });
+
+  // ── BITE QUALITY MODIFIERS ──
+  if (bq === BQ.EXCELLENT) {
+    ['bladed_jig','swim_jig','spinnerbait','lipless_large','crank_shallow'].forEach(id => score(id, 15));
+  }
+  if (bq <= BQ.SLOW) {
+    ['senko','finesse_worm','paddle_fattyz','tube_trd','tube_sk'].forEach(id => score(id, 20));
+    ['bladed_jig','whopper_plopper','walker','torpedo'].forEach(id => score(id, -25));
+  }
+  if (bq === BQ.POOR) {
+    LURES.filter(l => ['Topwater','Bladed Jig'].includes(l.cat)).forEach(l => score(l.id, -30));
+    ['senko','finesse_worm','paddle_fattyz'].forEach(id => score(id, 25));
+  }
+
+  // ── TOPWATER LOGIC ──
+  const topwaterOk = temp >= 60 && bq >= BQ.MODERATE;
+  const topwaterElevated = hasDawn && temp >= 60 && bq >= BQ.GOOD;
+  const topwaterExclude = temp < 60 || bq === BQ.POOR || (S.debris.includes('surface') && !hasLilyPads && !hasOpenWater);
+
+  if (topwaterExclude) {
+    ['hollow_frog','popper_small','popper_large','torpedo','whopper_plopper','walker','rebel_float'].forEach(id => suppress(id));
+  } else if (topwaterElevated) {
+    ['popper_large','walker','torpedo','whopper_plopper'].forEach(id => score(id, 20));
+    if (!isSheltered) score('popper_large', 5);
+  } else if (!topwaterOk) {
+    ['popper_small','popper_large','torpedo','whopper_plopper','walker'].forEach(id => score(id, -15));
+  }
+
+  // Frog
+  if (hasLilyPads || ((hasOverhangingVeg || hasHeavilyVeg) && hasDawn)) {
+    score('hollow_frog', topwaterElevated ? 30 : 15);
+  } else {
+    suppress('hollow_frog');
+  }
+  if (hasAlgaeMats && !hasLilyPads) {
+    ['popper_large','walker','torpedo'].forEach(id => score(id, -15));
+  }
+
+  // ── REACTION BAIT GATE ──
+  if (reactionGated) {
+    ['bladed_jig','swim_jig','spinnerbait','lipless_large','crank_shallow'].forEach(id => {
+      score(id, -30);
+    });
+  } else {
+    // Elevation scoring
+    let elev = 0;
+    if (bq === BQ.EXCELLENT) elev += 3;
+    else if (bq === BQ.GOOD) elev += 2;
+    if (isPreSpawn || isFall) elev += 1;
+    if (hasDawn) elev += 2;
+    else if (hasMorning) elev += 1;
+    if (S.sky.includes('overcast') || S.sky.includes('partlyCloudy')) elev += 1;
+    if (isWarmingTrend) elev += 1;
+    if (isMurky) elev += 1;
+    if (hasCurrentSeams || hasOpenWater) elev += 1;
+    if ((wind === 'moderate' || wind === 'strong') && (wbType === 'lakeMed' || wbType === 'lakeLarge' || wbType === 'reservoir')) elev += 1;
+    const elevBonus = Math.min(elev * 5, 25);
+    ['bladed_jig','swim_jig','spinnerbait'].forEach(id => score(id, elevBonus));
+  }
+
+  // ── FEATURE MODIFIERS ──
+  if (hasLaydowns) { score('flipping_jig', 20); score('creature_beaver', 15); score('jerkbait', 10); }
+  if (hasDocks) { score('flipping_jig', 20); score('senko', 10); }
+  if (hasRockyPoints) { score('tube_sk', 20); score('tube_trd', 15); score('crank_shallow', 15); score('football_jig', 10); }
+  if (hasCurrentSeams) { score('swim_jig', 10); score('spinnerbait', 10); score('crank_shallow', 10); score('hair_jig', 15); }
+  if (hasOpenWater) { score('swimbait_large', 15); score('lipless_large', 15); }
+  if (hasSubGrass) { score('swim_jig', 15); score('bladed_jig', 15); score('swimbait_large', 10); }
+  if (hasBrush) { score('flipping_jig', 15); score('football_jig', 10); }
+  if (hasLedges) { score('crank_deep', 25); score('football_jig', 20); score('senko', 15); }
+
+  // ── BOTTOM MODIFIERS ──
+  if (isSilt) {
+    suppress('football_jig'); suppress('creature_lizard');
+    score('swim_jig', 10); score('senko', 15); score('paddle_fattyz', 15);
+    score('paddle_dinger', 10); score('finesse_worm', 10);
+  }
+  if (isRock) {
+    score('tube_sk', 20); score('tube_trd', 15); score('football_jig', 15);
+    score('jerkbait', 10); score('crank_shallow', 10);
+  }
+
+  // ── DEEP PRESENTATION LOGIC ──
+  const depthSup = S.wb.depth === 'shallow' || S.wb.depth === 'shallowDeep';
+  if (depthSup) { score('crank_deep', -30); score('football_jig', -20); }
+  if (wbType === 'reservoir' || wbType === 'lakeLarge') {
+    score('crank_deep', 20); score('football_jig', 15);
+  }
+  if (temp > 80 && hasMidday) { score('crank_deep', 20); score('senko', 15); score('football_jig', 15); }
+
+  // ── JERKBAIT ──
+  if (isClearStained && temp && temp >= 45 && temp <= 62 && (isPostFront || bq <= BQ.GOOD)) {
+    if (hasLaydowns || hasRockyPoints || hasOpenWater) {
+      score('jerkbait', reactionGated ? -10 : 25);
+    }
+  } else {
+    score('jerkbait', -10);
+  }
+
+  // ── SEASON MODIFIERS ──
+  if (isFall) {
+    score('lipless_large', 20); score('spinnerbait', 15); score('swimbait_large', 20);
+    if (wbType === 'lakeMed' || wbType === 'lakeLarge' || wbType === 'reservoir') {
+      score('swimbait_large', 15); score('lipless_large', 10);
+    }
+  }
+  if (isPreSpawn) {
+    score('swim_jig', 15); score('bladed_jig', 15); score('creature_beaver', 15);
+    score('spinnerbait', 10);
+  }
+  if (season === 'winter') {
+    // Don't re-boost senko/finesse — bite quality already elevates them
+    // Focus on winter-specific: smallest profiles, slowest presentations
+    score('paddle_fattyz', 20); score('tube_trd', 15); score('finesse_worm', 10);
+    score('hair_jig', 10); // effective on winter smallmouth
+    ['bladed_jig','spinnerbait','lipless_large','crank_shallow'].forEach(id => score(id, -20));
+  }
+
+  // ── FORAGE MODIFIERS ──
+  if (forage === 'crayfish') { score('tube_sk', 15); score('tube_trd', 10); score('creature_beaver', 15); score('creature_bug', 10); }
+  if (forage === 'shad') { score('swimbait_small', 10); score('swimbait_large', 10); score('lipless_large', 10); score('lipless_small', 10); }
+
+
+  // ── SMALLMOUTH MODIFIER ──
+  if (isSmallmouth) {
+    score('tube_sk', 20); score('hair_jig', 20); score('crank_shallow', 10);
+    score('jerkbait', 15); score('swimbait_small', 10);
+  }
+
+  // ── PRESSURE MODIFIER ──
+  if (pressure === 'high') {
+    score('senko', 15); score('finesse_worm', 15); score('paddle_fattyz', 10); score('tube_trd', 10);
+    ['bladed_jig','spinnerbait','lipless_large'].forEach(id => score(id, -15));
+    if (S.bassGoal === 'goBig') {
+      // Large slow presentations
+      score('swimbait_large', 10); score('creature_beaver', 10);
+    }
+  }
+
+  // ── MURKY WATER DEPTH ──
+  if (isMurky) {
+    score('crank_deep', -15); // keep shallower
+    score('crank_shallow', 10);
+    score('spinnerbait', 10); // vibration
+    score('bladed_jig', 10);
+  }
+
+  // ── SIZE GOAL ──
+  if (S.bassGoal === 'goBig') {
+    score('hollow_frog', 10); score('football_jig', 10); score('flipping_jig', 10);
+    score('swimbait_large', 20); score('creature_beaver', 15); score('creature_lizard', 10);
+    score('panfish_jig', -99); score('tube_micro', -99); score('curly_grub', -15);
+  }
+  if (S.bassGoal === 'maximize') {
+    score('senko', 15); score('finesse_worm', 15); score('curly_grub', 20);
+    score('beetle_spin', 25); score('panfish_jig', 20);
+    score('swimbait_large', -15); score('football_jig', -10);
+  }
+
+  // ── HEAT STRESS ──
+  if (heatStressed) {
+    score('senko', 20); score('finesse_worm', 15); score('paddle_fattyz', 10);
+    score('tube_trd', 10);
+    ['bladed_jig','whopper_plopper','walker','torpedo'].forEach(id => score(id, -20));
+  }
+
+  // ── WARM DISCHARGE (Lake Anna winter) ──
+  if (S.presetId === 'lakeAnna' && season === 'winter') {
+    score('crank_deep', 10); score('swimbait_large', 10);
+  }
+
+  // Suppress lures not appropriate for water type
+  if (wbType === 'pond') {
+    score('swimbait_large', -20); score('crank_deep', -30);
+  }
+
+  return scores;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ROD AVAILABILITY
+// ═══════════════════════════════════════════════════════════════
+function getLureIndicator(lure) {
+  const owned = hasLure(lure.id);
+  if (!owned) return '✗';
+  if (!lure.rods || lure.rods.length === 0) return '✓'; // trailers
+  const hasRod = lure.rods.some(r => S.rods.includes(r));
+  return hasRod ? '✓' : '⚠';
+}
+
+function getIndicatorClass(ind) {
+  if (ind === '✓') return 'ind-owned';
+  if (ind === '✗') return 'ind-notowned';
+  return 'ind-warning';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LURE CARD GENERATION
+// ═══════════════════════════════════════════════════════════════
+function getBestRodLabel(lure) {
+  if (!lure.rods || lure.rods.length === 0) return 'Any';
+  const match = lure.rods.find(r => S.rods.includes(r));
+  if (match) return rodLabel(match);
+  return rodLabel(lure.rods[0]) + ' (not in today\'s kit)';
+}
+
+function rodLabel(r) {
+  const m = { spinning_ul:'UL Spinning', spinning_l:'L Spinning', spinning_m:'M Spinning', spinning_h:'H Spinning',
+    bc_bfs:'BFS Baitcaster', bc_m:'M Baitcaster', bc_mh:'MH Baitcaster', bc_h:'H Baitcaster',
+    fly_3wt:'3wt Fly', fly_4wt:'4wt Fly', fly_5wt:'5wt Fly', fly_8wt:'8wt Fly' };
+  return m[r] || r;
+}
+
+function getSizeGuidance(lure, bassGoal) {
+  if (bassGoal === 'goBig') {
+    const bigMap = { football_jig:'3/4–1oz', flipping_jig:'1/2–3/4oz', swim_jig:'1/2oz', spinnerbait:'3/4oz',
+      bladed_jig:'1/2oz — Jackhammer or full-size Thundercricket',
+      swimbait_large:'4–6"', creature_beaver:'4"', creature_lizard:'6"', senko:'5–7"', crank_deep:'1/2oz+' };
+    return bigMap[lure.id] || 'Go larger end of available sizes';
+  }
+  if (bassGoal === 'maximize') {
+    const smallMap = { senko:'3–4"', finesse_worm:'4"', paddle_fattyz:'2.5"', tube_trd:'2.5"', tube_sk:'3"',
+      football_jig:'3/8oz', swim_jig:'1/4oz', spinnerbait:'1/4oz', crank_shallow:'1/4–3/8oz',
+      bladed_jig:'3/8oz — standard chatterbait or smaller Thundercricket' };
+    return smallMap[lure.id] || 'Smallest available size';
+  }
+  const stdMap = { senko:'4–5"', creature_beaver:'3.5"', swim_jig:'3/8oz', football_jig:'1/2oz',
+    spinnerbait:'3/8–1/2oz', crank_shallow:'3/8–1/2oz', crank_deep:'1/2oz', tube_sk:'3–4"',
+    bladed_jig: S.waterTemp < 60 ? '3/8oz — slow-roll in cooler water' : '1/2oz — standard retrieves in warmer conditions' };
+  return stdMap[lure.id] || 'Standard size';
+}
+
+function getPresentation(lure, archetype, bq, temp) {
+  const pres = {
+    hollow_frog: 'Walk over pads or along vegetated bank edge. Pop and pause. Set hook on splash, not feel.',
+    bladed_jig: `${S.waterTemp < 60 ? '3/8oz — slow-roll near bottom in cooler water' : '1/2oz — medium-fast steady retrieve'}. Let it deflect off structure. ${S.clarity === 'murky' || S.clarity === 'muddy' ? 'Colorado blade for max thump in low visibility.' : 'Willow or standard blade for flash in clearer water.'} Pause-and-fall at weed edges and drop-offs.`,
+    swim_jig: S.wb.bottom === 'silt' ? 'Slow steady retrieve near cover. Pause at structure. Keep presentation elevated — silt bottom fouls the trailer on contact.' : 'Slow steady retrieve near cover. Pause at structure.',
+    spinnerbait: `${getSpinnerbaitBlade(S.clarity, temp, bq)}. Fan-cast and vary retrieve speed.`,
+    beetle_spin: 'Slow steady retrieve. Excellent along shoreline edges. Count down for depth.',
+    rooster_tail: 'Steady retrieve, vary speed. Good in moving water — cast upstream, retrieve with current.',
+    crank_shallow: S.wb.bottom === 'silt' ? 'Medium retrieve along edges and above the silt layer — avoid bottom contact to prevent fouling.' : 'Medium retrieve. Deflect off rocks and structure. Bang bottom gently.',
+    crank_deep: 'Long cast, slow retrieve. Keep in contact with structure. Pause at transition.',
+    lipless_small: 'Yo-yo retrieve — lift and drop. Fan-cast open water. Good for covering water.',
+    lipless_large: 'Yo-yo or steady retrieve. Especially effective in fall covering water for shad.',
+    jerkbait: 'Twitch, twitch, pause. Long pauses (5–10 sec) — most anglers don\'t pause long enough.',
+    football_jig: 'Drag slowly along bottom. Hop over rocks. Keep out of silt.',
+    flipping_jig: 'Pitch to precise target. Let fall on slack line. Hop twice then move.',
+    hair_jig: 'Current swing — cast upstream, mend, let swing downstream. Or slow vertical jigging.',
+    panfish_jig: 'Slow vertical presentation under bobber or count-down retrieve. 2–3 ft depth.',
+    senko: 'Wacky rig: cast, let sink on slack line. Texas rig: slow drag with gentle hops.',
+    creature_beaver: S.wb.bottom === 'silt' ? 'Slow swim just above the bottom — do not drag. Let it pulse on the fall, retrieve with slow sweeps to keep it elevated off the silt.' : 'Texas rig: slow hop-and-drag. Swim slow when bass are active.',
+    creature_lizard: 'Texas rig: slow drag near structure. Good parallel to bank on pre-spawn.',
+    creature_bug: S.wb.bottom === 'silt' ? 'Texas rig weightless or light (1/8oz) — slow fall above silt layer. Do not drag. Works well near edges and above silt flats.' : 'Punch through mats or Texas-rig near cover. Slow hop.',
+    paddle_dinger: 'Slow wacky or weightless — let it sink naturally. Very slow movement.',
+    paddle_fattyz: 'Ned rig: cast, let it stand on mushroom head, drag slowly. Minimal action needed.',
+    swimbait_small: 'Slow steady retrieve. Count down for depth. Match retrieve to forage depth.',
+    swimbait_large: 'Slow and steady. Don\'t burn it. Open water in fall — let fish find it.',
+    finesse_worm: 'Drop shot or ned rig. Minimal action — let natural fall do the work.',
+    tube_trd: 'Ned rig: drag slowly, stand-up on bottom. Small hops near rocks.',
+    tube_sk: 'Cast upstream, drag with current. Hop near rocks and boulders. Crawfish imitation.',
+    tube_micro: 'Drop shot or small jig head. Near structure at 2–5 ft depth.',
+    curly_grub: 'Slow steady retrieve or slow drag on jig head. Panfish crossover.',
+    rebel_float: 'Subtle twitch and pause on surface. Good near overhanging vegetation.'
+  };
+  return pres[lure.id] || 'Standard presentation for this lure type.';
+}
+
+function getWhyText(rank, lure, bq, archetype, scores) {
+  const totalShown = 6; // shown list length
+  const isBottom = rank > Math.ceil(totalShown / 2);
+
+  if (isBottom) {
+    const reasons = {
+      hollow_frog: 'no lily pad or vegetated bank structure to support a frog presentation',
+      crank_deep: 'shallow water limits deep crankbait utility here',
+      football_jig: S.wb.bottom === 'silt' ? 'silt bottom fouls dragging presentations' : 'conditions favor higher-action or finesse presentations today',
+      jerkbait: 'water clarity or temp doesn\'t favor the long-pause suspend-and-twitch approach',
+      swimbait_large: 'larger profiles underperform when bite is off or water is small',
+    };
+    const specific = reasons[lure.id];
+    if (specific) return `Lower priority today — ${specific}.`;
+    if (bq <= BQ.SLOW) return 'Lower priority — tough conditions favor slower, more finesse-oriented options above this.';
+    if (S.clarity === 'murky' || S.clarity === 'muddy') return 'Lower priority — murky water reduces effectiveness of visual triggers; vibration-based options rank higher.';
+    return 'Lower priority in these specific conditions — viable as a change-of-pace if top options aren\'t producing.';
+  }
+
+  // Top-half: specific condition-driven reasons
+  const cat = lure.cat;
+  const features = S.wb.features;
+  const temp = S.waterTemp;
+
+  // Lure-specific why text
+  const specific = {
+    hollow_frog: 'lily pad or vegetated bank structure enables mat-walking presentation — no weedless alternative matches it here',
+    bladed_jig: bq >= BQ.GOOD ? 'active fish + bladed vibration = reaction strikes — Jackhammer, Thundercricket, or standard chatterbait all work here' : 'blade thump and vibration cut through current clarity conditions — slow-roll along edges',
+    swim_jig: S.wb.bottom === 'silt' ? 'silt bottom means keeping presentations elevated — swim jig stays above the bottom where it would foul' : 'weedless profile and slow-roll retrieve match structure and bass positioning',
+    spinnerbait: `${S.clarity === 'murky' || S.clarity === 'muddy' ? 'Colorado blade thump is the primary trigger in low visibility' : 'flash and vibration cover water efficiently — good search tool'} at current conditions`,
+    beetle_spin: 'best panfish/bass crossover in the box — productive at this depth and size range',
+    crank_shallow: features.includes('rockyPoints') ? 'crankbait deflecting off rocky structure triggers reaction strikes' : 'covering water along edges and transitions',
+    crank_deep: 'depth structure or warm midday temps favor getting down — deep crankbait is the most efficient tool for this',
+    lipless_large: isFall() ? 'fall shad-following pattern — yo-yo retrieve across open water is the move' : 'lipless crankbait covers water efficiently and triggers active fish',
+    lipless_small: 'smaller profile matches forage size and works across rod weights',
+    jerkbait: 'clear/lightly stained water + cool temps = prime jerkbait conditions — long pause is the trigger',
+    football_jig: features.includes('rockyPoints') || S.wb.subsurface.includes('ledges') ? 'rock or ledge structure allows clean bounce and drag without fouling' : 'bottom-contact presentation for deeper structure',
+    flipping_jig: features.includes('laydowns') || features.includes('docks') ? 'precision flipping to laydown/dock structure — this is what this lure is built for' : 'heavy cover requires a weedless, high-action presentation',
+    hair_jig: S.wb.type === 'river' ? 'current swing is one of the most effective smallmouth techniques — natural fiber action in moving water' : 'finesse profile with natural action for pressured or lethargic fish',
+    senko: bq <= BQ.SLOW ? 'slow natural fall on slack line — the most reliable finesse presentation when bite is tough' : 'wacky or Texas rig produces when other presentations slow down',
+    finesse_worm: 'drop shot or ned rig — minimal action, natural fall, effective when fish won\'t commit to bigger presentations',
+    paddle_fattyz: 'ned rig stand-up posture on a light head — sits right in the strike zone even when fish are lethargic',
+    creature_beaver: features.includes('laydowns') ? 'slow-swum or hopped near laydown timber — displaces water and mimics a struggling prey item' : 'bulk and appendage action trigger a reaction even in tough conditions',
+    tube_sk: S.wb.type === 'river' ? 'crawfish imitation dragged and hopped along rocky river bottom — textbook smallmouth presentation' : 'natural crawfish profile for clear water or rocky substrate',
+    tube_trd: 'ned rig tube stands upright between hops — minimal action required, very effective in pressured water',
+    swimbait_large: isFall() ? 'fall shad schools pull bass into open water — a large swimbait matches the forage size' : 'large profile for trophy-focused presentation or open water search',
+    swimbait_small: 'smaller paddle tail matches baitfish size and works on light spinning — good panfish crossover',
+    rooster_tail: S.wb.type === 'river' ? 'inline spinner worked upstream or across current — excellent for river panfish and smallmouth' : 'steady retrieve inline spinner covers water with flash and vibration',
+    curly_grub: 'reliable panfish/bass crossover — slow retrieve on small jig head, effective at any depth',
+    panfish_jig: 'primary panfish tool — precise depth control under a bobber or on slow countdown retrieve',
+    tube_micro: 'small tube near structure is a proven crappie and panfish presentation, especially near woody cover',
+  };
+
+  const whyText = specific[lure.id];
+  if (whyText) return whyText.charAt(0).toUpperCase() + whyText.slice(1) + '.';
+
+  // Generic fallbacks by category
+  if (cat === 'Topwater') return 'Topwater conditions are favorable — dawn/dusk window or overcast sky extends surface feeding.';
+  if (cat === 'Bladed Jig') return 'Reaction bite conditions favor bladed presentations that cover water and trigger instinct strikes.';
+  if (cat === 'Spinnerbait') return 'Spinnerbait is a versatile search tool — flash and vibration work in these conditions.';
+  if (cat === 'Crankbait') return 'Crankbait efficiently covers water at the right depth for current conditions.';
+  if (cat === 'Jig') return 'Bottom-contact jig presentation matches the structure and conditions here.';
+  if (cat === 'Soft Plastic') return 'Finesse soft plastic is the reliable choice when conditions tighten up.';
+  return 'Viable option for these conditions.';
+}
+
+function isFall() { return S.season === 'fall'; }
+
+function getTerminalNote(lure) {
+  const direct = ['crank_shallow','crank_deep','jerkbait','lipless_small','lipless_large'];
+  const clip = ['spinnerbait','swim_jig','bladed_jig'];
+  if (direct.includes(lure.id)) return 'Direct tie — clip dampens action on hard baits';
+  if (clip.includes(lure.id)) return 'Clip fine — allows quick changes; clip does not affect bladed lure action';
+  return 'Direct tie recommended';
+}
+
+function getTrailerRec(lure, clarity, forage) {
+  const trailerMap = {
+    football_jig: clarity === 'murky' ? 'Rage Tail Chunk (white) — high contrast in dirty water' : 'ZMan Baby GoatZ (green pumpkin) — natural profile for clean water',
+    flipping_jig: clarity === 'murky' ? 'Rage Tail Chunk (white or blue) — contrast in cover' : 'ZMan GoatZ (green pumpkin) — bulk and action',
+    swim_jig: 'ZMan Diezel MinnowZ or paddle tail (white or shad) — hook directly onto swim jig hook; no separate jig head needed.',
+    bladed_jig: 'ZMan ChatterShadZ or Diezel MinnowZ (white or chartreuse) — adds profile and flash; use 1/4oz+ head to counter buoyancy on ZMan trailers',
+  };
+  return trailerMap[lure.id] || null;
+}
+
+function getColorStr(lure, clarity, forage, timePeriods) {
+  if (!lure.col || lure.col.length === 0) return 'Per conditions — see color guidance above';
+  if (lure.col[0] === 'various') return 'Match conditions — see color guidance above';
+  const colors = lure.col;
+  const isDawn = timePeriods.includes('dawn') || timePeriods.includes('dusk');
+  const isMurky = clarity === 'murky' || clarity === 'muddy';
+
+  let recommended = [];
+  if (isMurky) {
+    // Explicit high-contrast colors only — avoid substring match false positives (e.g. 'bluegill' contains 'blue')
+    const highContrast = ['white','chartreuse','black','blue/black','white/chartreuse','white/blue'];
+    recommended = colors.filter(c => highContrast.some(hi => c === hi || c.startsWith(hi)));
+    if (!recommended.length) recommended = [colors[0]];
+  } else if (clarity === 'clear' || clarity === 'lightly') {
+    if (forage === 'shad') recommended = colors.filter(c => ['silver','sexy shad','white','translucent','natural'].some(s => c.includes(s)));
+    else if (forage === 'crayfish') recommended = colors.filter(c => ['green pumpkin','watermelon','orange'].some(s => c.includes(s)));
+    else if (forage === 'bluegill') recommended = colors.filter(c => ['bluegill','olive','orange'].some(s => c.includes(s)));
+    else recommended = colors.slice(0, 2);
+    if (!recommended.length) recommended = colors.slice(0, 2);
+  } else {
+    recommended = colors.slice(0, 2);
+  }
+  if (!recommended.length) recommended = [colors[0]];
+  if (isDawn && !isMurky) recommended = recommended.slice(0, 1);
+  return recommended.join(' or ');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PANFISH SCORING
+// ═══════════════════════════════════════════════════════════════
+function scorePanfish(bq) {
+  const temp = S.waterTemp;
+  const season = S.season;
+  const clarity = S.clarity;
+  const features = S.wb.features;
+  const isRiver = S.wb.type === 'river';
+  const isSpawn = season === 'spawn';
+  const crappieSpawn = isSpawn && temp >= 58 && temp <= 65;
+  const bluegillSpawn = isSpawn && temp >= 65 && temp <= 75;
+  const hasDawn = S.timePeriods.includes('dawn') || S.timePeriods.includes('dusk');
+
+  const scores = {};
+  function score(id, v) { scores[id] = (scores[id]||0) + v; }
+
+  // Base panfish scores
+  score('beetle_spin', 75);
+  score('panfish_jig', 80);
+  score('finesse_worm', 45);
+  score('tube_micro', 70);
+  score('curly_grub', 70);
+  score('popper_small', 60);
+  score('rooster_tail', 65);
+  score('rebel_float', 60);
+  score('swimbait_small', 55);
+  score('tube_trd', 60);
+  score('hair_jig', 55);
+
+  // River panfish
+  if (isRiver) {
+    score('rooster_tail', 20); score('hair_jig', 25);
+    score('tube_trd', 15); score('beetle_spin', 10);
+  }
+
+  // Crappie spawn
+  if (crappieSpawn) {
+    score('tube_micro', 20); score('swimbait_small', 15); score('panfish_jig', 10);
+  }
+  // Bluegill spawn
+  if (bluegillSpawn) {
+    score('popper_small', 25); score('rebel_float', 20); score('panfish_jig', 15);
+  }
+
+  // Surface for panfish at dawn
+  if (hasDawn && temp >= 60) {
+    score('popper_small', 20); score('rebel_float', 15);
+  }
+
+  // Suppress surface panfish lures in cold water
+  if (temp < 58) {
+    score('popper_small', -40); score('rebel_float', -40);
+  }
+
+  // Dock structure
+  if (features.includes('docks')) { score('tube_micro', 15); score('panfish_jig', 15); }
+
+  // Pressure
+  if (S.pressure === 'high') { score('tube_trd', 15); score('finesse_worm', 10); }
+
+  // Bq modifier
+  if (bq <= BQ.SLOW) { score('panfish_jig', 10); score('tube_trd', 10); }
+
+  return scores;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OUTPUT GENERATION
+// ═══════════════════════════════════════════════════════════════
+function generateAndShow() {
+  const output = generateOutput();
+  document.getElementById('results-output').innerHTML = output;
+  // Save to localStorage
+  try { localStorage.setItem('strikeModel_lastSession', JSON.stringify(S)); } catch(e) {}
+  showScreen('results');
+}
+
+function generateOutput() {
+  const {bq, bluebird, skipModifiers} = calcBiteQuality();
+  const archetype = getArchetype();
+  const temp = S.waterTemp;
+  const wbType = S.wb.type;
+
+  let html = '';
+
+  // ── FLAGS ──
+  if (bluebird) html += `<div class="edge-flag flag-warning">⚠ Bluebird post-front — toughest conditions. Finesse only; expect slow action.</div>`;
+  if (S.sky.includes('frontMovingIn')) html += `<div class="edge-flag flag-warning">⚠ Pre-front feeding surge — often the best fishing of the month. Cover water fast — this window is closing.</div>`;
+  if (bq === BQ.POOR && S.bassGoal === 'goBig') html += `<div class="edge-flag flag-warning">⚠ Tough conditions override Go Big — downsize today.</div>`;
+  if (isPreSpawnPhotoperiod()) html += `<div class="edge-flag flag-info">ℹ Photoperiod effect — fish may show pre-spawn behavior despite cool temps. Check transitional zones.</div>`;
+  if (S.presetId === 'lakeAnna' && S.season === 'winter') html += `<div class="edge-flag flag-info">ℹ Warm water discharge on north side holds fish year-round in winter — worth targeting regardless of cold temps.</div>`;
+  if (wbType === 'tidal' || S.presetId === 'jamesLower') {
+    html += `<div class="edge-flag flag-info">ℹ Tide stage drives location. Check <strong>tideschart.com</strong> before fishing. Incoming: inside tidal creeks. Outgoing: creek mouths & channel edges. High: marsh edges & flats. Low: deeper remaining water.</div>`;
+  }
+
+  // ── CONDITIONS HEADLINE ──
+  const bqLabel = getBiteLabel(bq);
+  const bqClass = getBiteClass(bq);
+  const condSummary = getConditionsSummary(bq, archetype);
+  html += `<div class="conditions-banner">
+    <div class="bite-label ${bqClass}">Bite Quality: ${bqLabel}</div>
+    <div class="conditions-summary">${condSummary}</div>
+  </div>`;
+
+  // Unknown input notes
+  html += getUnknownNotes();
+
+
+
+  const isFly = S.rods.some(r => r.startsWith('fly_'));
+
+  if (isFly) {
+    html += generateFlyOutput(bq);
+  } else {
+    // ── BASS SECTION ──
+    if (S.species.includes('bass')) {
+      const scores = scoreLures(bq, archetype);
+      const bassIds = Object.keys(scores)
+        .filter(id => scores[id] > -99)
+        .filter(id => { const l = LURES.find(x => x.id === id); return l && !['Trailer','Fly'].includes(l.cat); })
+        .sort((a,b) => scores[b] - scores[a]);
+      html += generateSpeciesSection('Bass', bassIds, scores, bq, archetype);
+    }
+
+    // ── PANFISH SECTION ──
+    if (S.species.includes('panfish') && S.bassGoal !== 'goBig') {
+      const panScores = scorePanfish(bq);
+      const panIds = Object.keys(panScores).sort((a,b) => panScores[b] - panScores[a]);
+      html += generatePanfishSection(panIds, panScores, bq);
+    }
+  }
+
+  // ── TRANSITION NOTE ──
+  const transNote = getTransitionNote();
+  if (transNote) html += `<div class="transition-note">⏱ ${transNote}</div>`;
+
+  // ── DEBRIS NOTE ──
+  if (!S.debris.includes('none') && S.debris.length) {
+    html += getDebrisNote();
+  }
+
+  return html;
+}
+
+function isPreSpawnPhotoperiod() {
+  return S.season === 'preSpawn' && S.recentWeather.includes('warmingTrend') && S.waterTemp < 55;
+}
+
+function getConditionsSummary(bq, archetype) {
+  const temp = S.waterTemp;
+  const season = S.season;
+  const hasDawn = S.timePeriods.includes('dawn') || S.timePeriods.includes('dusk');
+  const archNames = ['','Shallow Weedy Pond','Open Pond / Minimal Structure','Dock Structure Water','Rocky River','Flatwater River / Backwater','Reservoir','Open Structure Lake','Tidal Flat'];
+
+  const bqSummaries = {
+    4: 'Excellent conditions — fish are actively feeding. Reaction baits and aggressive presentations are the primary tools.',
+    3: 'Good conditions — fish are willing to bite. Cover water efficiently and adjust presentation speed to temp.',
+    2: 'Moderate conditions — fish present but selectively feeding. Mix reaction baits and finesse based on what\'s producing.',
+    1: 'Slow bite — fish are lethargic. Finesse presentations and slow retrieves will outperform. Patience required.',
+    0: 'Poor conditions — very challenging. Focus on finesse, slow down dramatically, and target the most obvious cover.'
+  };
+  let summary = bqSummaries[bq] || '';
+
+  if (temp >= 78 && !hasDawn) summary += ' Heat-stressed midday — fish are tight to cover and shaded structure.';
+  if (temp > 80 && hasDawn) summary += ` Narrow dawn/dusk window — cover water aggressively in the first 60–90 minutes.`;
+  if (S.sky.includes('stormPassed')) {
+    if (S.recentWeather.some(w => w.startsWith('postFront'))) summary += ' Pressure rising — recovery may be accelerating.';
+    else summary += ' Sky clearing after storm — fresh oxygenated water; conditions improving.';
+  }
+  if (S.rainfall === 'lightNow') summary += ' Light rain often activates fish — stay on the water.';
+  if (S.rainfall === 'heavyNow') summary += ' Heavy rain: fish have moved toward inflows and bank edges.';
+  if (season === 'preSpawn' && S.recentWeather.includes('warmingTrend') && temp < 62) summary += ' Warming trend improving activity — slow reaction baits down from summer speeds.';
+  summary += ` Fishing ${archNames[archetype] || 'this water type'}.`;
+  if (S.presetId !== 'custom' && S.presetId && PRESETS[S.presetId]) {
+    summary += ` Water: ${PRESETS[S.presetId].name}.`;
+  }
+  return summary;
+}
+
+function getUnknownNotes() {
+  let html = '';
+  if (S.wb.bottom === 'unknown') html += `<div class="unknown-note">Bottom type unknown — silt vs. rock significantly affects jig and bottom-contact presentation recommendations.</div>`;
+  if (S.wb.features.includes('unknown') || !S.wb.features.length) html += `<div class="unknown-note">Visible features unknown — lily pad presence/absence changes topwater and frog recommendations substantially.</div>`;
+  if ((S.wb.type === 'reservoir' || S.wb.type === 'lakeLarge') && (S.wb.subsurface.includes('unknown') || !S.wb.subsurface.length)) {
+    html += `<div class="unknown-note">Subsurface structure unknown — ledge/drop-off presence significantly affects deep crankbait and football jig rankings.</div>`;
+  }
+  return html;
+}
+
+function generateSpeciesSection(label, rankedIds, scores, bq, archetype) {
+  // Cap at 6 — enough to give options without overwhelming
+  let ids = rankedIds.filter(id => {
+    const l = LURES.find(x => x.id === id);
+    return l && !['Trailer','Fly'].includes(l.cat);
+  }).slice(0, 6);
+  // Ensure minimum 3
+  if (ids.length < 3) {
+    const extra = Object.keys(scores).filter(id => !ids.includes(id) && scores[id] > -99)
+      .filter(id => { const l = LURES.find(x => x.id === id); return l && !['Trailer','Fly'].includes(l.cat); })
+      .sort((a,b) => scores[b] - scores[a]);
+    ids = [...ids, ...extra].slice(0, 3);
+  }
+
+  let html = `<div class="result-section"><div class="result-section-title">${label} Recommendations</div>`;
+
+  const topHalf = 3; // top 3 of 6 = notable gaps threshold
+  const gapsNotOwned = [], gapsWrongRod = [];
+
+  ids.forEach((id, i) => {
+    const lure = LURES.find(l => l.id === id);
+    if (!lure) return;
+    const rank = i + 1;
+    const ind = getLureIndicator(lure);
+    const indClass = getIndicatorClass(ind);
+    const color = getColorStr(lure, S.clarity, S.forage, S.timePeriods);
+    const size = getSizeGuidance(lure, S.bassGoal);
+    const pres = getPresentation(lure, archetype, bq, S.waterTemp);
+    const why = getWhyText(rank, lure, bq, archetype, scores);
+    const terminal = getTerminalNote(lure);
+    const trailer = getTrailerRec(lure, S.clarity, S.forage);
+    const rodStr = getBestRodLabel(lure);
+
+    // Notable gaps tracking
+    if (rank <= topHalf) {
+      if (ind === '✗') gapsNotOwned.push(lure.name);
+      else if (ind === '⚠') {
+        const neededRods = lure.rods.filter(r => !S.rods.includes(r));
+        const rodText = neededRods.map(r => rodLabel(r)).join(' or ');
+        gapsWrongRod.push({name: lure.name, rod: rodText});
+      }
+    }
+
+    let rodNote = '';
+    if (ind === '⚠') {
+      const neededRod = lure.rods.find(r => !S.rods.includes(r));
+      const rodName = neededRod ? rodLabel(neededRod) : 'appropriate rod';
+      rodNote = `<div class="lure-field" style="color:var(--copper2)">⚠ In your box — no compatible rod in today's kit (needs ${rodName})</div>`;
+    }
+
+    html += `<div class="lure-card">
+      <div class="lure-card-header">
+        <span class="lure-rank">#${rank} — ${lure.name}</span>
+        <span class="lure-indicator ${indClass}">${ind}</span>
+      </div>
+      ${rodNote}
+      <div class="lure-field"><strong>Why</strong> ${why}</div>
+      <div class="lure-field"><strong>Size</strong> ${size}</div>
+      <div class="lure-field"><strong>Color</strong> ${color}</div>
+      ${trailer ? `<div class="lure-field"><strong>Trailer</strong> ${trailer}</div>` : ''}
+      <div class="lure-field"><strong>Presentation</strong> ${pres}</div>
+      <div class="lure-field"><strong>Rod</strong> ${rodStr}</div>
+      <div class="lure-field"><strong>Terminal</strong> ${terminal}</div>
+    </div>`;
+  });
+
+  // Notable Gaps
+  if (gapsNotOwned.length || gapsWrongRod.length) {
+    html += `<div class="notable-gaps"><h4>Notable Gaps</h4>`;
+    if (gapsNotOwned.length) {
+      html += `<div style="font-size:12px;color:var(--cream3);margin-bottom:6px">Consider adding to your kit:</div>`;
+      gapsNotOwned.forEach(n => html += `<div class="gap-item">✗ ${n}</div>`);
+    }
+    if (gapsWrongRod.length) {
+      html += `<div style="font-size:12px;color:var(--cream3);margin:8px 0 6px">In your box — bring the right rod:</div>`;
+      gapsWrongRod.forEach(g => html += `<div class="gap-item">⚠ ${g.name}${g.rod ? ` — needs ${g.rod}` : ''}</div>`);
+    }
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function generatePanfishSection(rankedIds, scores, bq) {
+  const temp = S.waterTemp;
+  const season = S.season;
+  let html = `<div class="result-section"><div class="result-section-title">Panfish Recommendations</div>`;
+
+  // Species note for spawn
+  if (season === 'spawn') {
+    let speciesNote = '';
+    if (temp >= 58 && temp <= 65) speciesNote = `At ${temp}°F: crappie are likely on or near woody structure. Bluegill approaching shallow beds but not fully in spawn. Target structure first, then check open sandy shallows.`;
+    else if (temp >= 65 && temp <= 75) speciesNote = `At ${temp}°F: bluegill are on beds in open sandy/gravel shallows — look for light-colored circular depressions. Crappie spawn winding down. Cast near (not into) bed depressions.`;
+    if (speciesNote) html += `<div class="season-note">${speciesNote}</div>`;
+  }
+
+  const gapsNotOwned = [];
+
+  rankedIds.slice(0, 6).forEach((id, i) => {
+    const lure = LURES.find(l => l.id === id);
+    if (!lure) return;
+    const rank = i + 1;
+    const ind = getLureIndicator(lure);
+    const indClass = getIndicatorClass(ind);
+    const color = getColorStr(lure, S.clarity, S.forage, S.timePeriods);
+    const rodStr = getBestRodLabel(lure);
+
+    if (rank <= 3 && ind === '✗') gapsNotOwned.push(lure.name);
+
+    html += `<div class="lure-card">
+      <div class="lure-card-header">
+        <span class="lure-rank">#${rank} — ${lure.name}</span>
+        <span class="lure-indicator ${indClass}">${ind}</span>
+      </div>
+      <div class="lure-field"><strong>Color</strong> ${color}</div>
+      <div class="lure-field"><strong>Presentation</strong> ${getPanfishPresentation(lure)}</div>
+      <div class="lure-field"><strong>Rod</strong> ${rodStr}</div>
+    </div>`;
+  });
+
+  if (gapsNotOwned.length) {
+    html += `<div class="notable-gaps"><h4>Notable Gaps</h4>`;
+    gapsNotOwned.forEach(n => html += `<div class="gap-item">✗ ${n}</div>`);
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function getPanfishPresentation(lure) {
+  const m = {
+    beetle_spin:'Slow steady retrieve along shoreline edges. Excellent panfish crossover.',
+    panfish_jig:'Under bobber at 2–3 ft, or slow countdown retrieve near structure.',
+    tube_micro:'Drop near structure, slow hop. Count down to 4–5 ft for crappie.',
+    curly_grub:'Slow retrieve on small jig head. Very versatile — works at any depth.',
+    popper_small:'Pop-and-pause on surface. Best dawn/dusk near shoreline cover.',
+    rooster_tail:'Steady retrieve in moving water. Cast upstream, retrieve with current.',
+    rebel_float:'Subtle twitches on surface. Excellent near overhanging vegetation.',
+    swimbait_small:'Slow retrieve at 2–4 ft depth. Count down to target depth.',
+    tube_trd:'Ned rig style — drag slowly near rocky structure in rivers.',
+    hair_jig:'Current swing in rivers. Also vertical jigging near structure.',
+    finesse_worm:'Drop shot or light jig head near structure. Slow fall crucial.'
+  };
+  return m[lure.id] || 'Slow presentation near structure at panfish depth (2–5 ft).';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FLY OUTPUT
+// ═══════════════════════════════════════════════════════════════
+function generateFlyOutput(bq) {
+  const flyRod = S.rods.find(r => r.startsWith('fly_')) || 'fly_4wt';
+  const wt = parseInt(flyRod.split('fly_')[1]);
+  const sizeMx = { 3:[12,14,8], 4:[10,12,6], 5:[8,10,4], 8:[4,6,2] };
+  const sizes = sizeMx[wt] || sizeMx[4];
+  const [popperSz, nymphSz, streamerSz] = sizes;
+  const temp = S.waterTemp;
+  const hasDawn = S.timePeriods.includes('dawn') || S.timePeriods.includes('dusk');
+  const isRiver = S.wb.type === 'river';
+
+  let html = `<div class="result-section"><div class="result-section-title">Fly Fishing — ${wt}wt</div>`;
+
+  // Size table
+  html += `<div class="fly-card">
+    <div class="fly-section-label">Size Reference for ${wt}wt</div>
+    <div style="font-size:13px;color:var(--cream2)">
+      Poppers/Bugs: <strong>#${popperSz-2}–${popperSz}</strong> &nbsp;|&nbsp;
+      Nymphs: <strong>#${nymphSz}–${nymphSz+2}</strong> &nbsp;|&nbsp;
+      Streamers: <strong>#${streamerSz}–${streamerSz+2}</strong>
+    </div>
+  </div>`;
+
+  // Surface presentations
+  if (temp >= 60 && (hasDawn || S.clarity === 'clear')) {
+    html += `<div class="fly-card">
+      <div class="fly-section-label">Surface Presentations</div>
+      <div class="lure-field"><strong>Primary</strong> Foam Popper — #${popperSz} chartreuse or black. Loop knot. Pop-pause-pause on surface near cover. Best at dawn/dusk.</div>
+      <div class="lure-field"><strong>Secondary</strong> Silli-Leg Foam Bug — natural pattern. Cast to shade pockets, let sit, twitch gently.</div>
+      <div class="lure-field" style="font-size:12px;color:var(--cream3)">Knot: loop knot for all surface flies — allows natural action.</div>
+    </div>`;
+  }
+
+  // Subsurface
+  html += `<div class="fly-card">
+    <div class="fly-section-label">Subsurface Presentations</div>
+    ${isRiver ? `<div class="lure-field"><strong>Primary</strong> Bead-Headed Nymph — #${nymphSz} olive or black. Cast upstream, mend, dead-drift through seam. Strike indicator or high-stick.</div>` : ''}
+    <div class="lure-field"><strong>${isRiver ? 'Secondary' : 'Primary'}</strong> Woolly Bugger — #${streamerSz} olive or black. Slow strip retrieve near structure. Vary strip speed.</div>
+    <div class="lure-field"><strong>Tertiary</strong> Clouser Minnow — #${streamerSz} chartreuse/white. Jigging retrieve in open water or along drop-offs.</div>
+    <div class="lure-field" style="font-size:12px;color:var(--cream3)">Knot: direct tie for all subsurface flies.</div>
+  </div>`;
+
+  // Species notes
+  html += `<div class="fly-card">
+    <div class="fly-section-label">Species Notes</div>
+    <div class="lure-field">Bluegill: shallower (1–3 ft), near beds in spawn. Surface flies most effective through mid-morning.</div>
+    <div class="lure-field">Crappie: slightly deeper (3–5 ft), near woody structure and transitions. Count down 3–4 seconds before retrieve.</div>
+    ${isRiver ? '<div class="lure-field">Smallmouth: current seams and rocky structure. Nymph dead-drift or streamer swung downstream.</div>' : ''}
+  </div>`;
+
+  html += `</div>`;
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TRANSITION NOTES
+// ═══════════════════════════════════════════════════════════════
+function getTransitionNote() {
+  const tp = S.timePeriods;
+  const temp = S.waterTemp;
+  const season = S.season;
+  const notes = [];
+
+  if (tp.includes('dawn') && tp.includes('morning')) {
+    const transMap = {
+      preSpawn: 'Transition from topwater to shallow reaction baits (swim jig, chatterbait) along transitional edges — pre-spawn bass are feeding actively all morning.',
+      spawn: 'Move from topwater to precision presentations near visible structure — wacky Senko and creature baits near beds.',
+      postSpawn: 'Short topwater window at dawn. Transition to finesse presentations near staging areas. Recovering bass won\'t chase hard.',
+      summer: `Topwater window closing. Transition to subsurface within 60–90 minutes of first light — bass will move to cover as heat builds.`,
+      fall: 'Transition from topwater to reaction baits along the same edges — fall bass stay active through morning.',
+      winter: 'Minimal dawn topwater at these temps. Morning is your primary window — slow subsurface from first light.'
+    };
+    notes.push(transMap[season] || 'Transition from topwater to subsurface as light increases.');
+  }
+
+  const hasDuskTransition = tp.includes('dusk') && (tp.includes('afternoon') || tp.includes('evening') || tp.length === 1);
+  if (hasDuskTransition) {
+    if (temp >= 65) {
+      notes.push(temp >= 75
+        ? 'Heat-stressed fish reactivating as temps drop at dusk. Start subsurface reaction baits 60–90 min before dark, then go topwater as light fades.'
+        : 'Prepare topwater rod as light fades — dusk window can be explosive. Have walker, torpedo, or popper ready before you need it.');
+    }
+  }
+
+  if (tp.includes('morning') && tp.includes('midday') && temp > 75) {
+    notes.push('Fish moving tighter to cover as heat builds. Transition from covering water to precision presentations — target shade, dock edges, and any deeper adjacent structure.');
+  }
+
+  return notes.length ? notes.join('<br>') : '';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DEBRIS NOTE
+// ═══════════════════════════════════════════════════════════════
+function getDebrisNote() {
+  const d = S.debris;
+  const notes = [];
+  if (d.includes('surface')) {
+    const evNote = S.presetId === 'evergreen' ? ' (At Evergreen: cyanobacteria = dispersed pockets, not walkable mats — hook fouling is the primary concern.)' : '';
+    notes.push(`Surface debris: standard topwater retrieve suppressed — target edges and pockets. Check hooks frequently for fouling.${evNote}`);
+    if (S.wb.features.includes('lilyPads')) notes.push('Frog viable at mat edges.');
+  }
+  if (d.includes('midCol')) notes.push('Mid-column debris: slow-falling presentations will foul. Keep lures near surface or punch through with 1/4oz+ to fish below debris.');
+  if (d.includes('bottom')) notes.push('Bottom debris: avoid dragging. Ned rig (stands up) and drop shot (suspended) are your best options.');
+  if (d.includes('surface') && d.includes('midCol')) notes.push('Combined surface + mid-column: stay at the very surface or punch through to below. Avoid the middle column entirely.');
+  return notes.length ? `<div class="season-note">🌿 Debris: ${notes.join(' ')}</div>` : '';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODAL SYSTEM
+// ═══════════════════════════════════════════════════════════════
+const MODAL_CONTENT = {
+  waterType: {
+    title: 'Water Body Types',
+    body: `<table><tr><th>Type</th><th>Fishing Character</th></tr>
+      <tr><td>Pond / Small Lake</td><td>Edge-dominant, no chop, fish relate to shoreline. Stealth matters.</td></tr>
+      <tr><td>Lake — Medium</td><td>Open water viable seasonally. Wind creates chop and concentrates baitfish on windward bank.</td></tr>
+      <tr><td>Lake — Large</td><td>Open water is a different fishery. Location-finding critical. Thermocline matters in summer.</td></tr>
+      <tr><td>Reservoir</td><td>Dam-controlled depth. Hard structure at dam face. Shad-dominant forage. Drawdown affects positioning.</td></tr>
+      <tr><td>River</td><td>Current seams are primary structure. Face upstream. Smallmouth possible. Bottom contact generally viable.</td></tr>
+      <tr><td>Tidal River</td><td>Tide stage as important as time of day. Largemouth dominant. Check tide chart before fishing.</td></tr></table>
+      <br><strong>Virginia size reference:</strong><table>
+      <tr><th>Category</th><th>Acres</th><th>Examples</th></tr>
+      <tr><td>Pond/Small Lake</td><td>&lt;100 ac</td><td>Evergreen (~10 ac), farm ponds</td></tr>
+      <tr><td>Medium Lake</td><td>100–5,000 ac</td><td>Briery Creek (~845 ac), Swift Creek (~1,700 ac)</td></tr>
+      <tr><td>Large Lake</td><td>&gt;5,000 ac</td><td>Lake Anna (~13,000 ac), Kerr (~50,000 ac)</td></tr></table>
+      <br><em>Can you see across it easily? → Pond. Public lake you drove to? → Medium or Large.</em>`
+  },
+  sizeGoal: {
+    title: 'Bass Size Goal',
+    body: `<strong>Go big or go home:</strong> Baitcasters only. Largest profiles — accept fewer bites, targeting trophy fish. Panfish section suppressed.<br><br>
+      <strong>Maximize hookups:</strong> Smaller presentations — more action, may include larger crappie and panfish crossover. Finesse-size lures elevated.<br><br>
+      <strong>Hedge:</strong> Requires multiple rods (at minimum: one heavier baitcaster + UL spinning). Heavier rod gets big presentations, UL gets maximize-size. Best of both approaches.`
+  },
+  season: {
+    title: 'Season / Spawn Stage',
+    body: `Water temperature always overrides the calendar date.<br><br>
+      <table><tr><th>Season</th><th>Typical Temp</th><th>Bass Behavior</th></tr>
+      <tr><td>Winter</td><td>Below 50°F</td><td>Metabolically slow, tight to deepest available water</td></tr>
+      <tr><td>Pre-Spawn</td><td>50–62°F</td><td>Moving shallow, increasingly aggressive as temps rise</td></tr>
+      <tr><td>Spawn</td><td>62–72°F</td><td>On beds in shallow structure. Protective aggression</td></tr>
+      <tr><td>Post-Spawn</td><td>68–78°F</td><td>Recovering, mix of lethargic and actively feeding fish</td></tr>
+      <tr><td>Summer</td><td>Above 75°F</td><td>Heat-stressed midday; best fishing dawn and dusk</td></tr>
+      <tr><td>Fall</td><td>55–70°F cooling</td><td>Actively feeding to build reserves; following shad schools</td></tr></table>`
+  },
+  recentWeather: {
+    title: 'Recent Weather Pattern',
+    body: `<strong>Key distinction:</strong><br><br>
+      <strong>Warming trend</strong> = gradual temperature increase with no frontal passage. Fish were never suppressed — they're becoming more active as water warms. Reaction baits can be viable even in cooler water on a warming trend.<br><br>
+      <strong>Post-cold front</strong> = fish went through a lockjaw period as pressure spiked. They're now recovering. Same water temp as the warming trend scenario, but very different bite quality — finesse first.<br><br>
+      You can combine — select "warming trend" + "post-cold front 48+ hrs" to indicate the front passed and temps are now recovering upward. The app applies both signals.`
+  },
+  clarity: {
+    title: 'Water Clarity',
+    body: `<strong>How to measure:</strong> Lower a white lure on your line and note the depth at which it disappears.<br><br>
+      <table><tr><th>Label</th><th>Visibility</th><th>Color Strategy</th></tr>
+      <tr><td>Clear</td><td>2 ft+</td><td>Natural colors; forage-matching; slower retrieves</td></tr>
+      <tr><td>Lightly stained</td><td>6 in – 2 ft</td><td>Both natural and contrast viable</td></tr>
+      <tr><td>Murky</td><td>3 – 6 in</td><td>High contrast: white, chartreuse, black; vibration is the trigger</td></tr>
+      <tr><td>Muddy</td><td>0 – 3 in</td><td>High contrast only; vibration &gt; color</td></tr></table>`
+  },
+  forage: {
+    title: 'Forage Keying',
+    body: `<strong>Key principle: Size match &gt; Species match.</strong> A bass keyed on 3-inch shad will eat a 3-inch bluegill, crayfish, or juvenile bass equally. Forage selection affects color (in clear water) and lure SIZE more than species-specific matching.<br><br>
+      <strong>When to select Unknown:</strong> Use seasonal defaults — the app will pre-select the most likely forage for the season.<br><br>
+      <strong>Signs of forage type:</strong> Shad: surface ripples, birds diving, silver flashes. Crayfish: muddy bottom areas, rocky substrate active, crawfish shells visible.`
+  },
+  pressure: {
+    title: 'Fishing Pressure',
+    body: `<strong>Low:</strong> Fish less educated — reaction baits and larger profiles elevated. Conventional presentations work well.<br><br>
+      <strong>Medium:</strong> No adjustment — standard recommendations apply.<br><br>
+      <strong>High:</strong> Fish have seen most standard presentations — finesse outperforms. Unusual presentations favored. Natural colors more effective than high-contrast attractor colors. Slower retrieves critical.`
+  },
+  debris: {
+    title: 'Debris / Water Column',
+    body: `<strong>Surface:</strong> Floating material (scum, algae mats, pine needles) limits standard topwater. Target edges and open pockets. Check hooks frequently — fouling kills hooksets.<br><br>
+      <strong>Mid-column:</strong> Suspended waterlogged debris fouls slow-falling presentations. Keep lures near surface or punch through with 1/4oz+ weight to fish below the debris layer.<br><br>
+      <strong>Bottom:</strong> Thick bottom algae or settled debris — avoid dragging. Ned rig (stands upright) and drop shot (suspended) are best options.`
+  },
+  habitatFeatures: {
+    title: 'Habitat Features',
+    body: `<strong>Cover</strong> (where fish hide) = vegetation, laydowns, overhanging foliage<br>
+      <strong>Structure</strong> (what fish relate to) = ledges, drop-offs, channel edges, rocky points<br><br>
+      Select all visible features — the app uses each selection to adjust which presentations, depths, and techniques are most appropriate.<br><br>
+      <em>Can't see the bottom or underwater features? Select "Unknown" for subsurface structure — the app will use water type and visible features to generate the best possible recommendations.</em>`
+  },
+  testingQuestions: {
+    title: 'How to Validate Recommendations',
+    body: `<p style="color:var(--cream3);font-size:12px;margin-bottom:12px">The most effective way to catch inaccuracies is to fish with the app and compare what it recommends to what actually works. These questions help you evaluate accuracy systematically — both on the water and hypothetically.</p>
+
+<strong>ADDITIONAL VALIDATION STRATEGIES</strong><br><br>
+
+<em>Point me to sources for decision tree review</em><br>
+• <strong>VA DWR Fishing Reports</strong> (dwr.virginia.gov) — seasonal reports for the James River and reservoirs. Share a link and I can compare what DWR guides are reporting against what the app would recommend for the same conditions.<br>
+• <strong>YouTube trip reports</strong> — if you find a video of someone fishing Pony Pasture, Maidens, or Kerr Lake in specific conditions and describing what worked, share the link and I can evaluate whether the app would have produced the same recommendation.<br>
+• <strong>Tournament reports</strong> — Bassmaster and Major League Fishing reports for James River and Virginia reservoir events often describe exact conditions and dominant presentations. Share them and I'll cross-reference.<br>
+• <strong>Bass fishing forums</strong> (bassresource.com) — the James River thread has years of condition-specific reports. Share specific threads and I can evaluate the decision tree against real angler experience.<br><br>
+
+<em>Structured scenario testing without fishing</em><br>
+Rather than open-ended bug hunting, we can run structured scenario batteries — you describe a specific condition set you know well, I generate what the app would output, and you evaluate whether the recommendation matches your experience as an angler. This is faster than fishing and catches bugs efficiently. We could do 10–15 scenarios in a single session covering conditions you know from Evergreen or the James Middle.<br><br>
+
+<em>Ask me to justify specific rankings</em><br>
+When an output surprises you, ask: "Why does X rank above Y for these conditions?" I can walk through the exact scoring math — archetype baseline, each modifier applied, final score — and you can evaluate whether the reasoning makes fishing sense. This is more diagnostic than just noting the output feels wrong.<br><br>
+
+<em>The most important ongoing test</em><br>
+After any session, look at the #1 ranked lure and ask: <em>Would I actually tie that on first given these exact conditions?</em> If not, note what you'd tie on instead and why, then share that with me. A single real-session observation generates better signal than ten hypothetical reviews.<br><br>
+
+<strong>SCENARIO QUESTIONS BY WATER</strong><br><br>
+
+<strong>Evergreen Lake</strong><br>
+• At 82°F midday, do recommendations correctly suppress reaction baits and favor slow finesse near the silt bottom and shade? Does the silt note appear correctly on every bottom-contact lure?<br>
+• At 58°F pre-spawn on a warming trend, do swim jig and creature bait rank prominently? Does the output note slower retrieves than summer?<br>
+• When algae mats are selected but no lily pads, does the hollow body frog disappear from recommendations?<br>
+• At dawn in fall with clear water, does jerkbait rank well? Does shad appear as the seasonal forage default?<br>
+• In winter — does the app mention the dam trough as a cold-water staging area?<br><br>
+
+<strong>James River — Middle (Maidens / Pony Pasture)</strong><br>
+• Rocky, moderate-current session at 65°F clear water: do tube baits and hair jigs lead? Does swim jig rank inappropriately high?<br>
+• Slow backwater / silt bottom section: do recommendations shift toward wacky rigs and slow presentations?<br>
+• With smallmouth selected, do tube and hair jig rank above largemouth-centric lures?<br>
+• At 58°F post-front, is jerkbait recommended with a long-pause note?<br><br>
+
+<strong>Reservoirs (Swift Creek, Lake Anna, Kerr Lake)</strong><br>
+• 72°F with dock-heavy shoreline: does flipping jig lead? Does deep crankbait also appear given the reservoir archetype?<br>
+• Fall at Lake Anna with shad forage: do open-water presentations (swimbait, lipless) rank prominently?<br>
+• Does the Lake Anna warm discharge flag appear only in winter?<br>
+• Kerr Lake with submerged brush selected: does flipping jig rank above swim jig?<br><br>
+
+<strong>Seasonal transitions</strong><br>
+• 62°F late April, stable: does spawn season auto-suggest? Does forage shift to bluegill?<br>
+• 55°F in March on a warming trend vs. 55°F stable: is the difference visible in recommendations?<br>
+• Post-spawn 72°F moderate bite: does output mix finesse and reaction baits rather than committing to one?<br><br>
+
+<strong>Conditions you rarely encounter</strong><br>
+• Muddy water: are all visual presentations eliminated? Is spinnerbait with Colorado blade prominent?<br>
+• Strong wind on a medium lake: does the windward bank note appear? Do reaction baits rank higher?<br>
+• High fishing pressure at Evergreen: does output shift to finesse and unusual presentations?<br><br>
+
+<strong>Cross-cutting checks</strong><br>
+• UL spinning only: are all baitcaster-only lures (football jig, flipping jig, bladed jig) showing ⚠ or ✗?<br>
+• Go Big selected: do finesse lures rank at the bottom? Does the panfish section disappear?<br>
+• Maximize selected: do panfish-crossover lures (beetle spin, curly tail grub) appear in the bass section?<br>
+• Dawn + morning selected in summer: does the transition note describe the topwater-to-subsurface shift with appropriate urgency?`
+  },
+  faq: {
+    title: 'Virginia Bass Fishing Guide',
+    body: `<p style="color:var(--cream3);font-size:11px;margin-bottom:12px">General seasonal and behavioral patterns for Central Virginia bass fishing. Sources: VA DWR species profiles and fishing guides.</p>
+
+<strong>LARGEMOUTH BASS — SEASONAL BEHAVIOR</strong><br><br>
+
+<em>Winter (water below 50°F)</em><br>
+Largemouth move to the deepest available water and become metabolically slow. On small ponds like Evergreen, fish stack near the dam trough in the morning and spread to edges at midday. Presentations must be painfully slow — a senko on a slow drag, a ned rig barely moving. Reaction baits are rarely effective. Warming midday sun can briefly activate fish near dark-bottomed shallow areas.<br><br>
+
+<em>Pre-Spawn (50–62°F, typically March–April in Central VA Piedmont)</em><br>
+Fish begin moving from deep water toward staging areas near spawning flats. Pre-spawn fish are aggressive feeders — they're putting on weight before the spawn. This is one of the most productive windows of the year. Reaction baits become viable as temperatures rise through the 50s. By 58–60°F, swim jigs, spinnerbaits, and creature baits fished along transitional edges produce well. Cover water efficiently — fish are on the move, not yet locked to beds.<br><br>
+
+<em>Spawn (62–72°F, typically late April–May)</em><br>
+Largemouth build nests in 1–4 ft of water near hard substrate (gravel, sand) adjacent to cover. Males defend nests aggressively — sight fishing with slow, precise presentations near visible beds is the primary technique. Wacky-rigged senko, creature baits, and small swimbaits dropped near beds are effective. Fish are territorial, not feeding — triggering a reaction or protective strike is the goal. Note: VA DWR encourages catch-and-release during spawn to protect recruitment.<br><br>
+
+<em>Post-Spawn (68–78°F, typically May–June)</em><br>
+A mixed bag — some fish are recovering and lethargic, others are actively feeding again. Females typically recover faster than males and move to deeper structure. Finesse presentations near staging areas work for recovering fish; reaction baits along edges work for active fish. Don't be surprised by inconsistent results — the population is stratified.<br><br>
+
+<em>Summer (above 75°F)</em><br>
+The most variable and challenging pattern. Fish are heat-stressed during midday and move to shaded cover, deeper water, or oxygenated areas. Dawn and dusk provide 60–90 minute windows of aggressive surface feeding. Midday: slow finesse near shade, dock edges, and any available depth. At Evergreen specifically, the dam end holds fish through summer heat. Low-oxygen areas (stagnant coves with algae) should be avoided — fish concentrate near any oxygenation source.<br><br>
+
+<em>Fall (55–70°F cooling, typically September–November)</em><br>
+One of the two best seasons. Largemouth follow shad schools as baitfish move to shallow water to feed on dying vegetation. This creates aggressive, feeding fish willing to chase reaction baits. Lipless crankbaits, spinnerbaits, and swimbaits covering water efficiently are the primary tools. On larger waters, fish may be genuinely in open water following schools. On small ponds, shad-following still occurs but fish stay tight to edges. Fall topwater can be excellent during early morning as long as water stays above 60°F.<br><br>
+
+<strong>SMALLMOUTH BASS — VIRGINIA RIVERS</strong><br><br>
+
+<em>General behavior</em><br>
+Smallmouth thrive in oxygenated coolwater with gravel and rock substrate. They are one of the top predators in their habitat and feed opportunistically on crayfish, baitfish, and aquatic insects. In Virginia, smallmouth are found in rivers and streams throughout the Piedmont above the fall line — the James, Rappahannock, Rivanna, Maury, New, and Shenandoah rivers all hold quality smallmouth populations.<br><br>
+
+<em>Spring pre-spawn (mid-March through April, above 55°F)</em><br>
+According to VA DWR, mid-to-late March signals the beginning of pre-spawn activity. Fish become aggressive feeders and are excellent targets. Cover water with subsurface minnow imitations, crankbaits, lipless crankbaits, and spinnerbaits in stained water. In clear water, jerkbaits with long pauses are highly effective. DWR specifically notes the Rat-L-Trap and soft plastic swimbaits on jig heads as productive pre-spawn tools.<br><br>
+
+<em>Spawn (water above 60°F, typically late April–May)</em><br>
+VA DWR: smallmouth spawn on gravelly substrate in 2–6 ft of water behind boulders, logs, or other current breaks. Males defend nests. Spawning success is highly dependent on stable water conditions — high muddy water in spring can wash out beds and harm recruitment. Fish can be caught on slow precise presentations near spawning habitat.<br><br>
+
+<em>Summer</em><br>
+Smallmouth seek cooler, oxygenated water in current seams, deeper pools, and shaded sections. Early morning and evening are most productive near current seams. Midday fish tend to hold in deeper runs. Tube baits, hair jigs worked in current, and crayfish-pattern presentations are reliable summer tools.<br><br>
+
+<em>Fall (one of the best seasons for big smallmouth)</em><br>
+VA DWR describes fall as "one of the best times of the year to target big smallmouth." Feeding activity peaks as fish prepare for winter. Subsurface lures work well — particularly in October and November. DWR specifically recommends large streamers (Clouser Minnow, Deceiver, Half & Half) on sinking lines in mid-to-late fall. For conventional tackle, large swimbaits, jigs, and crankbaits covering water efficiently are the top producers.<br><br>
+
+<em>Winter</em><br>
+Smallmouth hold in deeper water and require slow, patient presentations. Deep pools near current breaks are the primary holding areas. Slow jig presentations near bottom are most effective.<br><br>
+
+<strong>WEATHER AND CONDITIONS</strong><br><br>
+
+<em>Cold fronts</em><br>
+The most disruptive weather event for bass fishing. As a cold front approaches, barometric pressure drops and fish feed aggressively — sometimes the best fishing of the month. After the front passes, pressure spikes and fish go into lockjaw, particularly in clear, calm (bluebird) conditions. Recovery time varies: in warmer water (65°F+) fish often recover within 24–48 hours. In cooler water the suppression can last 3–4 days. Post-front + overcast + wind accelerates recovery significantly.<br><br>
+
+<em>Rain</em><br>
+Light rain is often excellent — surface disturbance reduces fish wariness, oxygenates the water, and can trigger feeding. Heavy rain degrades clarity rapidly and pushes fish toward inflows and bank edges where runoff enters. A muddy river after heavy spring rain: smallmouth will orient to any available cover to avoid fighting strong current.<br><br>
+
+<em>Water temperature thresholds</em><br>
+Below 50°F: metabolic suppression, finesse only<br>
+50–55°F: fish becoming active, slow presentations<br>
+55–62°F: pre-spawn activity, reaction baits viable<br>
+62–72°F: peak activity, full lure selection<br>
+72–78°F: excellent but heat stress building<br>
+Above 78°F: dawn/dusk windows only, midday suppressed<br>
+Above 85°F: very challenging, expect poor results<br><br>
+
+<em>Water clarity</em><br>
+Clear (2ft+): natural colors, forage-matching, slower retrieves<br>
+Lightly stained (6in–2ft): transition zone, both approaches viable<br>
+Murky (3–6in): high contrast colors, vibration is the trigger, lateral line presentations<br>
+Muddy (0–3in): high contrast only, maximum vibration, fish shallower than in clear water<br><br>
+
+<strong>JAMES RIVER — SPECIFIC NOTES</strong><br><br>
+The James River slot limit (14–22 inches protected, only 1 fish over 22 inches per day) applies from the confluence of the Jackson and Cowpasture rivers downstream to the 14th Street Bridge in Richmond. This covers the Middle James section including Maidens and Pony Pasture.<br><br>
+
+Fall on the James: VA DWR specifically highlights October through November as prime time for big smallmouth on the James River in Richmond. Large streamers on sinking lines and big subsurface presentations are the top fly fishing approaches. For conventional tackle, large swimbaits and jigs covering deeper runs are the equivalent.<br><br>
+
+<strong>TIDAL JAMES — SPECIFIC NOTES</strong><br><br>
+Below the fall line, largemouth bass are the dominant species. Tide stage matters as much as time of day. Incoming tide pushes baitfish inside tidal creeks — follow them in. Outgoing tide concentrates fish at creek mouths and channel edges as baitfish are pulled back out. High tide disperses fish across grass flats and marsh edges, making them harder to locate. Low tide concentrates fish in the deepest remaining water. Always check tide charts (tideschart.com) before fishing the tidal James.`
+  }
+};
+
+function showModal(key) {
+  const content = MODAL_CONTENT[key];
+  if (!content) return;
+  document.getElementById('modal-title').textContent = content.title;
+  document.getElementById('modal-content').innerHTML = content.body;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INITIALIZATION
+// ═══════════════════════════════════════════════════════════════
+function updateLabels() {
+  // Update question labels when continuing
+  document.querySelectorAll('[id^="q"]').forEach(el => {
+    const match = el.id.match(/^q(\d+)-label$/);
+    if (match) el.textContent = `Question ${match[1]}`;
+  });
+}
+
+function populateScreenBeforeShow(id) {
+  // Restore visual state from S for every screen
+  if (id === 'q1b') { populateWBScreen(); setTimeout(updateNav, 0); return; }
+
+  // Generic restore for all other screens
+  const restoreMap = {
+    q1: () => {
+      if (!S.presetId) return;
+      document.querySelectorAll('#screen-q1 .opt').forEach(b => {
+        const fn = b.getAttribute('onclick') || '';
+        b.classList.toggle('selected', fn.includes(`'${S.presetId}'`));
+      });
+    },
+    q2: () => {
+      const map = { bass:'bass', panfish:'panfish', both:'both' };
+      const val = S.species.includes('bass') && S.species.includes('panfish') ? 'both'
+                : S.species.includes('bass') ? 'bass'
+                : S.species.includes('panfish') ? 'panfish' : null;
+      document.querySelectorAll('#screen-q2 .opt').forEach(b => {
+        const fn = b.getAttribute('onclick') || '';
+        b.classList.toggle('selected', val && fn.includes(`'${val}'`));
+      });
+    },
+    q3: () => {
+      if (!S.bassGoal) return;
+      document.querySelectorAll('#screen-q3 .opt').forEach(b => {
+        const fn = b.getAttribute('onclick') || '';
+        b.classList.toggle('selected', fn.includes(`'${S.bassGoal}'`));
+      });
+    },
+    q4: () => {
+      if (!S.season) return;
+      document.querySelectorAll('#screen-q4 .opt').forEach(b => {
+        const fn = b.getAttribute('onclick') || '';
+        b.classList.toggle('selected', fn.includes(`'${S.season}'`));
+      });
+    },
+    q5: () => highlightSelectedTemp(),
+    q6: () => {
+      document.querySelectorAll('#screen-q6 .opt').forEach(b => {
+        b.classList.toggle('selected', S.timePeriods.includes(b.dataset.val));
+      });
+    },
+    q7: () => {
+      const rods = Array.isArray(S.rods) ? S.rods : [];
+      document.querySelectorAll('[data-q="rods"]').forEach(b => {
+        b.classList.toggle('selected', rods.includes(b.dataset.val));
+      });
+    },
+    q8: () => {
+      if (!S.flyLine) return;
+      document.querySelectorAll('#screen-q8 .opt').forEach(b => {
+        const fn = b.getAttribute('onclick') || '';
+        b.classList.toggle('selected', fn.includes(`'${S.flyLine}'`));
+      });
+    },
+    q9: () => {
+      document.querySelectorAll('[data-q="sky"]').forEach(b => {
+        b.classList.toggle('selected', S.sky.includes(b.dataset.val));
+      });
+    },
+    q10: () => {
+      document.querySelectorAll('[data-q="recentWeather"]').forEach(b => {
+        b.classList.toggle('selected', S.recentWeather.includes(b.dataset.val));
+      });
+    },
+    q11: () => {
+      if (!S.rainfall) return;
+      document.querySelectorAll('#screen-q11 .opt').forEach(b => {
+        const fn = b.getAttribute('onclick') || '';
+        b.classList.toggle('selected', fn.includes(`'${S.rainfall}'`));
+      });
+    },
+    q12: () => {
+      if (!S.clarity) return;
+      document.querySelectorAll('#screen-q12 .opt').forEach(b => {
+        const fn = b.getAttribute('onclick') || '';
+        b.classList.toggle('selected', fn.includes(`'${S.clarity}'`));
+      });
+    },
+    q13: () => {
+      if (!S.wind) return;
+      document.querySelectorAll('#screen-q13 .opt').forEach(b => {
+        const fn = b.getAttribute('onclick') || '';
+        b.classList.toggle('selected', fn.includes(`'${S.wind}'`));
+      });
+    },
+    q14: () => highlightForage(),
+    q15: () => {
+      if (!S.pressure) return;
+      document.querySelectorAll('#screen-q15 .opt').forEach(b => {
+        const fn = b.getAttribute('onclick') || '';
+        b.classList.toggle('selected', fn.includes(`'${S.pressure}'`));
+      });
+    },
+    q16: () => {
+      document.querySelectorAll('#screen-q16 .opt').forEach(b => b.classList.remove('selected'));
+      if (S.debris.includes('none') || !S.debris.length) {
+        const noneBtn = document.getElementById('debris-none-btn');
+        if (noneBtn) noneBtn.classList.add('selected');
+      } else {
+        document.querySelectorAll('#screen-q16 .opt[data-val]').forEach(b => {
+          b.classList.toggle('selected', S.debris.includes(b.dataset.val));
+        });
+      }
+    },
+    q17: () => buildLureChecklist(),
+  };
+
+  if (restoreMap[id]) restoreMap[id]();
+  setTimeout(updateNav, 0);
+}
+
+function highlightSelectedTemp() {
+  if (!S.waterTemp) return;
+  const tempMap = {42:0,47:1,52:2,57:3,62:4,66:5,71:6,77:7,82:8,87:9};
+  const btns = document.querySelectorAll('#temp-opts .opt');
+  const vals = [42,47,52,57,62,66,71,77,82,87];
+  btns.forEach((b, i) => b.classList.toggle('selected', vals[i] === S.waterTemp));
+}
+
+function highlightForage() {
+  if (!S.forage) return;
+  const forageBtns = document.querySelectorAll('#screen-q14 .opt');
+  const forageVals = ['unknown','shad','bluegill','crayfish','multiple'];
+  forageBtns.forEach((b, i) => {
+    if (forageVals[i]) b.classList.toggle('selected', forageVals[i] === S.forage);
+  });
+}
+
+// populateScreenBeforeShow is called directly inside showScreen — no override needed
+
+// Auto-suggest season on Q4
+function autoSuggestSeason() {
+  const month = new Date().getMonth() + 1;
+  const region = S.wb.region;
+  // VA Piedmont season calendar
+  const seasonMap = { 1:'winter',2:'winter',3:'preSpawn',4:'preSpawn',5:'spawn',6:'postSpawn',
+                      7:'summer',8:'summer',9:'fall',10:'fall',11:'fall',12:'winter' };
+  const suggested = seasonMap[month] || 'summer';
+  const seasonNames = { winter:'Winter', preSpawn:'Pre-Spawn', spawn:'Spawn', postSpawn:'Post-Spawn', summer:'Summer', fall:'Fall' };
+  const note = document.getElementById('season-auto-note');
+  if (note) {
+    note.textContent = `Auto-suggested for ${new Date().toLocaleString('default',{month:'long'})}: ${seasonNames[suggested]}. Tap any option to override.`;
+    note.style.display = 'block';
+  }
+  if (!S.season) {
+    S.season = suggested;
+    // Pre-select
+    document.querySelectorAll('#screen-q4 .opt').forEach(b => b.classList.remove('selected'));
+    const btn = document.querySelector(`[onclick^="setSeason('${suggested}')"]`);
+    if (btn) btn.classList.add('selected');
+    updateNav();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  resetState();
+  SCREENS = buildFlow();
+  showScreen('welcome');
+  checkCarryForward();
+
+  // Q4 auto-suggest on screen show
+  const q4Screen = document.getElementById('screen-q4');
+  const observer = new MutationObserver(() => {
+    if (q4Screen.classList.contains('active')) autoSuggestSeason();
+  });
+  observer.observe(q4Screen, { attributes: true, attributeFilter: ['class'] });
+
+  // Rebuild flow when rod selection changes (fly vs non-fly)
+  document.querySelectorAll('[data-q="rods"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      SCREENS = buildFlow();
+    });
+  });
+
+  // Rebuild flow when species changes
+  document.querySelectorAll('#screen-q2 .opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      SCREENS = buildFlow();
+    });
+  });
+});
+</script>
+</body>
+</html>
